@@ -1,0 +1,5 @@
+{
+  "template": "vite-react-ts",
+  "startScript": "dev",
+  "node": "18"
+}
