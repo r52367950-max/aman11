@@ -52,10 +52,19 @@ export function revokeRefreshTokensForUser(userId) {
 }
 
 async function seedDefaultUser() {
-  const passwordHash = await hashPassword(process.env.AUTH_SEED_PASSWORD ?? 'ChangeMe123!');
+  const seedLogin = process.env.AUTH_SEED_LOGIN?.trim().toLowerCase();
+  const seedPassword = process.env.AUTH_SEED_PASSWORD;
+
+  if (!seedLogin || !seedPassword) {
+    // eslint-disable-next-line no-console
+    console.warn('[auth-server] skipping user seed: set AUTH_SEED_LOGIN and AUTH_SEED_PASSWORD to enable seeding');
+    return;
+  }
+
+  const passwordHash = await hashPassword(seedPassword);
   const user = {
     id: crypto.randomUUID(),
-    loginId: (process.env.AUTH_SEED_LOGIN ?? 'admin@aman.test').toLowerCase(),
+    loginId: seedLogin,
     displayName: 'Aman Admin',
     passwordHash,
     role: 'admin',
