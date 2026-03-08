@@ -95,3 +95,6 @@ npm run start
 ```
 
 If preview still fails, restart the sandbox and make sure port `5173` is the active preview port.
+
+If the editor shows TypeScript errors like `Unknown compiler option`, make sure CodeSandbox uses the
+workspace TypeScript version from `node_modules/typescript` (not an older built-in TypeScript service).
