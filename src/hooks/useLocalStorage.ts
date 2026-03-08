@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
+const MAX_STORAGE_ITEM_BYTES = 100_000;
+
 export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T | ((val: T) => T)) => void] {
   // Get stored value or use initial value
   const readValue = useCallback((): T => {
@@ -9,6 +11,10 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
 
     try {
       const item = window.localStorage.getItem(key);
+      if (item && item.length > MAX_STORAGE_ITEM_BYTES) {
+        window.localStorage.removeItem(key);
+        return initialValue;
+      }
       return item ? (JSON.parse(item) as T) : initialValue;
     } catch (error) {
       console.warn(`Error reading localStorage key "${key}":`, error);
@@ -30,13 +36,19 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T 
         
         // Save to localStorage
         if (typeof window !== 'undefined') {
-          window.localStorage.setItem(key, JSON.stringify(valueToStore));
+          const serialized = JSON.stringify(valueToStore);
+
+          if (serialized.length > MAX_STORAGE_ITEM_BYTES) {
+            throw new Error(`Value for key "${key}" exceeds localStorage size guard`);
+          }
+
+          window.localStorage.setItem(key, serialized);
           
           // Dispatch custom event for cross-tab synchronization
           window.dispatchEvent(
             new StorageEvent('storage', {
               key,
-              newValue: JSON.stringify(valueToStore),
+              newValue: serialized,
             })
           );
         }
