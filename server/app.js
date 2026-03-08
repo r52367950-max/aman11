@@ -138,6 +138,16 @@ const server = http.createServer(async (req, res) => {
         return json(res, 401, { code: 'AUTH_INVALID_TOKEN', message: 'User not found' });
       }
 
+      const nextRefreshToken = createRefreshToken(user);
+      revokeRefreshToken(hashToken(refreshToken));
+      storeRefreshToken(hashToken(nextRefreshToken), {
+        userId: user.id,
+        expiresAt: Date.now() + authConfig.refreshTtlSeconds * 1000,
+        ip: req.socket.remoteAddress ?? 'unknown',
+        userAgent: req.headers['user-agent'] ?? 'unknown',
+      });
+      setRefreshCookie(res, nextRefreshToken);
+
       return json(res, 200, { accessToken: createAccessToken(user), expiresIn: authConfig.accessTtlSeconds });
     }
 
@@ -154,18 +164,31 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && url.pathname === '/api/auth/logout-all') {
-      const body = await readBody(req);
-      if (!body.userId || typeof body.userId !== 'string') {
-        return json(res, 400, { code: 'AUTH_INVALID_REQUEST', message: 'userId is required' });
+      const claims = authenticateAccessToken(req);
+      if (!claims) {
+        return json(res, 401, { code: 'AUTH_INVALID_TOKEN', message: 'Valid access token required' });
       }
 
-      revokeRefreshTokensForUser(body.userId);
+      const user = findUserByLoginId(claims.sub);
+      if (!user) {
+        return json(res, 401, { code: 'AUTH_INVALID_TOKEN', message: 'User not found' });
+      }
+
+      revokeRefreshTokensForUser(user.id);
       clearRefreshCookie(res);
       return json(res, 200, { ok: true });
     }
 
     return json(res, 404, { code: 'NOT_FOUND', message: 'Route not found' });
   } catch (error) {
+    if (error instanceof Error && error.message === 'Invalid JSON') {
+      return json(res, 400, { code: 'AUTH_INVALID_REQUEST', message: 'Invalid JSON payload' });
+    }
+
+    if (error instanceof Error && error.message === 'Payload too large') {
+      return json(res, 413, { code: 'AUTH_PAYLOAD_TOO_LARGE', message: 'Payload too large' });
+    }
+
     // eslint-disable-next-line no-console
     console.error('[auth-server] unexpected error', error);
     return json(res, 500, { code: 'AUTH_INTERNAL_ERROR', message: 'Internal server error' });
@@ -217,6 +240,28 @@ function isRateLimited(req) {
   valid.push(now);
   authAttempts.set(key, valid);
   return false;
+}
+
+function authenticateAccessToken(req) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+
+  const token = authHeader.slice('Bearer '.length).trim();
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const claims = verifyToken(token, authConfig.jwtSecret);
+    if (claims.type !== 'access' || typeof claims.sub !== 'string') {
+      return null;
+    }
+    return claims;
+  } catch {
+    return null;
+  }
 }
 
 function applySecurityHeaders(req, res) {

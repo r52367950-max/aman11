@@ -1,42 +1,76 @@
 const SAFE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
-const ALLOWED_TAGS = new Set([
-  'p',
-  'br',
-  'strong',
-  'em',
-  'ul',
-  'ol',
-  'li',
-  'blockquote',
-  'h2',
-  'h3',
-  'h4',
-  'a',
-]);
-
+const ALLOWED_TAGS = new Set(['p', 'br', 'strong', 'em', 'ul', 'ol', 'li', 'blockquote', 'h2', 'h3', 'h4', 'a']);
 const ALLOWED_HREF_PATTERN = /^(https?:\/\/|\/|#)/i;
 
 export function sanitizeRichText(html: string): string {
-  return html.replace(/<\/?([a-zA-Z0-9-]+)([^>]*)>/g, (fullMatch, rawTag, rawAttrs = '') => {
-    const tag = String(rawTag).toLowerCase();
+  if (typeof window === 'undefined' || typeof DOMParser === 'undefined') {
+    return escapeHtml(html);
+  }
 
-    if (!ALLOWED_TAGS.has(tag)) {
-      return '';
+  const parser = new DOMParser();
+  const document = parser.parseFromString(html, 'text/html');
+  const fragment = document.createDocumentFragment();
+
+  for (const node of Array.from(document.body.childNodes)) {
+    const sanitized = sanitizeNode(node, document);
+    if (sanitized) {
+      fragment.appendChild(sanitized);
     }
+  }
 
-    if (fullMatch.startsWith('</')) {
-      return `</${tag}>`;
+  const container = document.createElement('div');
+  container.appendChild(fragment);
+  return container.innerHTML;
+}
+
+function sanitizeNode(node: Node, document: Document): Node | null {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return document.createTextNode(node.textContent ?? '');
+  }
+
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return null;
+  }
+
+  const element = node as Element;
+  const tag = element.tagName.toLowerCase();
+  if (!ALLOWED_TAGS.has(tag)) {
+    const passthrough = document.createDocumentFragment();
+    for (const child of Array.from(element.childNodes)) {
+      const sanitizedChild = sanitizeNode(child, document);
+      if (sanitizedChild) {
+        passthrough.appendChild(sanitizedChild);
+      }
     }
+    return passthrough;
+  }
 
-    if (tag === 'a') {
-      const hrefMatch = rawAttrs.match(/href\s*=\s*['"]([^'"]+)['"]/i);
-      const href = hrefMatch?.[1] ?? '#';
-      const safeHref = ALLOWED_HREF_PATTERN.test(href) ? href : '#';
-      return `<a href="${safeHref}" rel="noopener noreferrer">`;
+  const cleanElement = document.createElement(tag);
+
+  if (tag === 'a') {
+    const href = element.getAttribute('href') ?? '#';
+    const safeHref = ALLOWED_HREF_PATTERN.test(href.trim()) ? href.trim() : '#';
+    cleanElement.setAttribute('href', safeHref);
+    cleanElement.setAttribute('rel', 'noopener noreferrer');
+  }
+
+  for (const child of Array.from(element.childNodes)) {
+    const sanitizedChild = sanitizeNode(child, document);
+    if (sanitizedChild) {
+      cleanElement.appendChild(sanitizedChild);
     }
+  }
 
-    return `<${tag}>`;
-  });
+  return cleanElement;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }
 
 export function isSafeSlug(slug: string): boolean {
