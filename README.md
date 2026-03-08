@@ -71,3 +71,16 @@ export default defineConfig([
   },
 ])
 ```
+
+## Auth backend (minimal)
+
+This repository now includes a minimal Node.js authentication server under `server/`.
+
+```bash
+npm run auth:dev
+```
+
+Default test credentials can be configured with env vars:
+
+- `AUTH_SEED_LOGIN` (default: `admin@aman.test`)
+- `AUTH_SEED_PASSWORD` (default: `ChangeMe123!`)

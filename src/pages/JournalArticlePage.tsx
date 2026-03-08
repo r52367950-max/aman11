@@ -3,12 +3,15 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Calendar, Clock, Share2, Heart } from 'lucide-react';
 import { useState } from 'react';
 import { getArticleBySlug, getAllArticles } from '@/data/journal';
+import { isSafeSlug, sanitizeRichText } from '@/lib/security';
 
 export function JournalArticlePage() {
   const { slug } = useParams<{ slug: string }>();
-  const article = getArticleBySlug(slug ?? '');
+  const safeSlug = slug && isSafeSlug(slug) ? slug : '';
+  const article = getArticleBySlug(safeSlug);
   const allArticles = getAllArticles();
   const [isLiked, setIsLiked] = useState(false);
+  const sanitizedContent = article ? sanitizeRichText(article.content) : '';
 
   if (!article) {
     return (
@@ -102,7 +105,7 @@ export function JournalArticlePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             className="prose prose-lg max-w-none prose-headings:font-serif font-light prose-headings:font-light prose-headings:text-[#1A1A1A] prose-p:text-[#6B6B6B] prose-p:leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: article.content }}
+            dangerouslySetInnerHTML={{ __html: sanitizedContent }}
           />
 
           {/* Tags */}
