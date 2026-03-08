@@ -1,14 +1,44 @@
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Calendar, Clock, Share2, Heart } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { getArticleBySlug, getAllArticles } from '@/data/journal';
+
+function sanitizeArticleContent(html: string): string {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+
+  doc.querySelectorAll('script, style, iframe, object, embed, link, meta, base, form').forEach((node) => {
+    node.remove();
+  });
+
+  doc.querySelectorAll('*').forEach((element) => {
+    for (const attr of [...element.attributes]) {
+      const name = attr.name.toLowerCase();
+      const value = attr.value.trim().toLowerCase();
+
+      if (name.startsWith('on')) {
+        element.removeAttribute(attr.name);
+        continue;
+      }
+
+      if ((name === 'href' || name === 'src') && value.startsWith('javascript:')) {
+        element.removeAttribute(attr.name);
+      }
+    }
+  });
+
+  return doc.body.innerHTML;
+}
 
 export function JournalArticlePage() {
   const { slug } = useParams<{ slug: string }>();
   const article = getArticleBySlug(slug ?? '');
   const allArticles = getAllArticles();
   const [isLiked, setIsLiked] = useState(false);
+  const safeArticleContent = useMemo(() => {
+    if (!article) return '';
+    return sanitizeArticleContent(article.content);
+  }, [article]);
 
   if (!article) {
     return (
@@ -102,7 +132,7 @@ export function JournalArticlePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
             className="prose prose-lg max-w-none prose-headings:font-serif font-light prose-headings:font-light prose-headings:text-[#1A1A1A] prose-p:text-[#6B6B6B] prose-p:leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: article.content }}
+            dangerouslySetInnerHTML={{ __html: safeArticleContent }}
           />
 
           {/* Tags */}
