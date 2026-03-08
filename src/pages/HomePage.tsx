@@ -14,7 +14,7 @@ import { Newsletter } from '@/sections/Newsletter';
 // Import enhanced components
 import { FeaturedOffers } from '@/sections/FeaturedOffers';
 import { Testimonials } from '@/sections/Testimonials';
-import { QuickLinks } from '@/sections/QuickLinks';
+import { QuickLinks } from '@/components/QuickLinks';
 
 gsap.registerPlugin(ScrollTrigger);
 

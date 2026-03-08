@@ -71,3 +71,27 @@ export default defineConfig([
   },
 ])
 ```
+
+## Auth backend (minimal)
+
+This repository now includes a minimal Node.js authentication server under `server/`.
+
+```bash
+npm run auth:dev
+```
+
+Default test credentials can be configured with env vars:
+
+- `AUTH_SEED_LOGIN` (default: `admin@aman.test`)
+- `AUTH_SEED_PASSWORD` (default: `ChangeMe123!`)
+
+## CodeSandbox 502 troubleshooting
+
+If preview shows `502 Bad Gateway`, it usually means the dev server is not exposed on a public interface.
+This repo's scripts are configured to bind Vite to `0.0.0.0`:
+
+```bash
+npm run start
+```
+
+If preview still fails, restart the sandbox and make sure port `5173` is the active preview port.
