@@ -80,7 +80,9 @@ This repository now includes a minimal Node.js authentication server under `serv
 npm run auth:dev
 ```
 
-Default test credentials can be configured with env vars:
+Optional seed credentials can be configured with env vars:
 
-- `AUTH_SEED_LOGIN` (default: `admin@aman.test`)
-- `AUTH_SEED_PASSWORD` (default: `ChangeMe123!`)
+- `AUTH_SEED_LOGIN`
+- `AUTH_SEED_PASSWORD`
+
+If either variable is missing, no default user is created.
