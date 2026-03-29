@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Star, Check, ShoppingBag, Heart, Share2, Minus, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getProductBySlug } from '@/data/shop';
+import { SEO } from '@/components/seo';
 
 export function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -29,8 +30,18 @@ export function ProductDetailPage() {
     setTimeout(() => setAddedToCart(false), 2000);
   };
 
+  const canonicalUrl = `https://aman.com/shop/product/${product.slug}`;
+
   return (
     <div className="min-h-screen bg-[#F5F0E8] pt-20">
+      <SEO
+        title={product.name}
+        description={product.description}
+        canonical={canonicalUrl}
+        url={canonicalUrl}
+        image={product.image}
+        type="product"
+      />
       {/* Breadcrumb */}
       <div className="container-aman py-6">
         <Link to="/shop" className="flex items-center gap-2 text-[#6B6B6B] hover:text-[#1A1A1A] transition-colors">

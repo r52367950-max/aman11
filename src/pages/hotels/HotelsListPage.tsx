@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { getAllHotels } from '@/data/hotels';
 import type { HotelDetail } from '@/data/hotels';
+import { SEO } from '@/components/seo';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -94,6 +95,13 @@ export function HotelsListPage() {
 
   return (
     <div className="min-h-screen bg-[#F5F0E8] pt-20">
+      <SEO
+        title="Hotels & Resorts"
+        description="Browse Aman hotels and resorts across iconic destinations, from urban sanctuaries to remote nature retreats."
+        canonical="https://aman.com/hotels"
+        url="https://aman.com/hotels"
+        image="/images/hotels/aman-new-york.jpg"
+      />
       {/* Hero Header */}
       <div className="bg-[#1A1A1A] text-white py-16 md:py-24">
         <div className="container-aman">

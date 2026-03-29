@@ -15,6 +15,7 @@ import { Newsletter } from '@/sections/Newsletter';
 import { FeaturedOffers } from '@/sections/FeaturedOffers';
 import { Testimonials } from '@/sections/Testimonials';
 import { QuickLinks } from '@/components/QuickLinks';
+import { SEO } from '@/components/seo';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -31,6 +32,13 @@ export function HomePage() {
 
   return (
     <div className="home-page">
+      <SEO
+        title="Luxury Hotels & Resorts"
+        description="Explore Aman luxury hotels, resorts, and residences around the world with curated journeys, wellness, and exceptional stays."
+        canonical="https://aman.com/"
+        url="https://aman.com/"
+        image="/images/og-image.jpg"
+      />
       {/* Hero Section - Full Screen */}
       <Hero />
 

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getHotelBySlug } from '@/data/hotels';
+import { SEO } from '@/components/seo';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -96,8 +97,43 @@ export function HotelDetailPage() {
     setCurrentImageIndex((prev) => (prev - 1 + hotel.gallery.length) % hotel.gallery.length);
   };
 
+  const canonicalUrl = `https://aman.com/hotels/${hotel.slug}`;
+  const hotelStructuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'Hotel',
+    name: hotel.name,
+    description: hotel.description,
+    image: hotel.gallery[0] || hotel.image,
+    url: canonicalUrl,
+    address: {
+      '@type': 'PostalAddress',
+      streetAddress: hotel.locationDetails.address,
+      addressLocality: hotel.location,
+      addressCountry: hotel.country,
+    },
+    geo: {
+      '@type': 'GeoCoordinates',
+      latitude: hotel.locationDetails.coordinates.lat,
+      longitude: hotel.locationDetails.coordinates.lng,
+    },
+    amenityFeature: hotel.amenities.map((amenity) => ({
+      '@type': 'LocationFeatureSpecification',
+      name: amenity,
+      value: true,
+    })),
+  };
+
   return (
     <div className="min-h-screen bg-[#F5F0E8]">
+      <SEO
+        title={hotel.name}
+        description={hotel.description}
+        canonical={canonicalUrl}
+        url={canonicalUrl}
+        image={hotel.gallery[0] || hotel.image}
+        type="hotel"
+        structuredData={hotelStructuredData}
+      />
       {/* Hero Gallery */}
       <div className="relative h-[70vh] overflow-hidden">
         <AnimatePresence mode="wait">
