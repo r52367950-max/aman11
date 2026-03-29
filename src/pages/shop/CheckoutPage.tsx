@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { apiRequest } from '@/lib/api';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Check, CreditCard, Shield } from 'lucide-react';
 
 export function CheckoutPage() {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     email: '',
@@ -35,7 +36,7 @@ export function CheckoutPage() {
         action: {
           label: '查看购物车',
           onClick: () => {
-            window.location.href = '/shop/cart';
+            navigate('/shop/cart');
           },
         },
       });
@@ -50,7 +51,6 @@ export function CheckoutPage() {
           },
         },
       });
-      throw error;
     } finally {
       setIsSubmittingOrder(false);
     }
