@@ -42,8 +42,14 @@ export function CartPage() {
     ));
   };
 
-  const removeItem = (id: string) => {
-    setCart(cart.filter(item => item.id !== id));
+  const removeItem = (id: string, size?: string) => {
+    setCart(
+      cart.filter((item) => {
+        if (item.id !== id) return true;
+        if (!size) return false;
+        return item.size !== size;
+      })
+    );
   };
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -88,7 +94,7 @@ export function CartPage() {
                         {item.size && <p className="text-sm text-[#9A9A9A]">{item.size}</p>}
                       </div>
                       <button
-                        onClick={() => removeItem(item.id)}
+                        onClick={() => removeItem(item.id, item.size)}
                         aria-label={`Remove ${item.name} from cart`}
                         className="text-[#9A9A9A] hover:text-red-500 transition-colors"
                       >
