@@ -29,6 +29,35 @@ const refreshSchema = z.object({
   refreshToken: z.string().min(10).max(4096).optional(),
 });
 
+const newsletterSchema = z.object({
+  email: z.string().email().max(120),
+});
+
+const checkoutSchema = z.object({
+  email: z.string().email().max(120),
+  firstName: z.string().min(1).max(120),
+  lastName: z.string().min(1).max(120),
+  address: z.string().min(1).max(200),
+  city: z.string().min(1).max(120),
+  postalCode: z.string().min(1).max(32),
+  phone: z.string().min(1).max(32),
+  cardName: z.string().min(1).max(120),
+});
+
+const bookingSchema = z.object({
+  hotelSlug: z.string().min(1).max(120).optional(),
+  roomId: z.string().min(1).max(120),
+  checkIn: z.string().min(1).max(64),
+  checkOut: z.string().min(1).max(64),
+  guests: z.number().int().min(1).max(8),
+  firstName: z.string().min(1).max(120),
+  lastName: z.string().min(1).max(120),
+  email: z.string().email().max(120),
+  phone: z.string().min(1).max(32).optional(),
+  specialRequests: z.string().max(1000).optional(),
+  cardName: z.string().min(1).max(120),
+});
+
 const server = http.createServer(async (req, res) => {
   applySecurityHeaders(req, res);
 
@@ -171,6 +200,58 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { ok: true });
     }
 
+
+    if (req.method === 'POST' && url.pathname === '/api/newsletter/subscribe') {
+      const body = await readBody(req);
+      const parsed = newsletterSchema.safeParse(body);
+      if (!parsed.success) {
+        return json(res, 400, { code: 'VALIDATION_ERROR', message: 'Invalid newsletter payload' });
+      }
+
+      return json(res, 200, {
+        code: 'NEWSLETTER_SUBSCRIBED',
+        message: 'Newsletter subscription successful',
+        data: {
+          email: parsed.data.email,
+          subscribedAt: new Date().toISOString(),
+        },
+      });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/checkout/submit') {
+      const body = await readBody(req);
+      const parsed = checkoutSchema.safeParse(body);
+      if (!parsed.success) {
+        return json(res, 400, { code: 'VALIDATION_ERROR', message: 'Invalid checkout payload' });
+      }
+
+      return json(res, 200, {
+        code: 'CHECKOUT_SUBMITTED',
+        message: 'Checkout submitted',
+        data: {
+          orderId: `ord_${Math.random().toString(36).slice(2, 10)}`,
+          createdAt: new Date().toISOString(),
+        },
+      });
+    }
+
+    if (req.method === 'POST' && url.pathname === '/api/booking/submit') {
+      const body = await readBody(req);
+      const parsed = bookingSchema.safeParse(body);
+      if (!parsed.success) {
+        return json(res, 400, { code: 'VALIDATION_ERROR', message: 'Invalid booking payload' });
+      }
+
+      return json(res, 200, {
+        code: 'BOOKING_SUBMITTED',
+        message: 'Booking submitted',
+        data: {
+          bookingId: `bkg_${Math.random().toString(36).slice(2, 10)}`,
+          createdAt: new Date().toISOString(),
+        },
+      });
+    }
+
     if (req.method === 'POST' && url.pathname === '/api/auth/logout-all') {
       const authUser = authenticateAccessRequest(req);
       if (!authUser) {
@@ -255,8 +336,25 @@ function applySecurityHeaders(req, res) {
 }
 
 function json(res, status, payload) {
+  const envelope = normalizeResponse(payload);
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8' });
-  res.end(JSON.stringify(payload));
+  res.end(JSON.stringify(envelope));
+}
+
+function normalizeResponse(payload) {
+  if (payload && typeof payload === 'object' && 'code' in payload && 'message' in payload && 'data' in payload) {
+    return payload;
+  }
+
+  if (payload && typeof payload === 'object' && 'code' in payload && 'message' in payload) {
+    return { code: payload.code, message: payload.message, data: payload.data ?? null };
+  }
+
+  return {
+    code: 'OK',
+    message: 'Success',
+    data: payload ?? null,
+  };
 }
 
 function readCookie(req, name) {

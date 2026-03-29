@@ -1,27 +1,49 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, ArrowRight } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { apiRequest } from '@/lib/api';
 
 export function NewsletterForm() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
 
+  const submitNewsletter = async (emailToSubmit: string) => {
+    setStatus('submitting');
+    try {
+      await apiRequest('/api/newsletter/subscribe', {
+        method: 'POST',
+        body: { email: emailToSubmit },
+      });
+      setStatus('success');
+      setEmail('');
+      toast.success('订阅成功，感谢关注 Aman 最新动态。');
+    } catch (error) {
+      setStatus('error');
+      const description = error instanceof Error ? error.message : '订阅失败，请稍后重试。';
+      toast.error('订阅失败', {
+        description,
+        action: {
+          label: '重试',
+          onClick: () => {
+            void submitNewsletter(emailToSubmit);
+          },
+        },
+      });
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !email.includes('@')) {
       setStatus('error');
+      toast.error('请输入有效邮箱地址。');
       return;
     }
 
-    setStatus('submitting');
-    
-    // Simulate API call
-    setTimeout(() => {
-      setStatus('success');
-      setEmail('');
-    }, 1500);
+    void submitNewsletter(email);
   };
 
   return (

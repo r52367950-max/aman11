@@ -1,17 +1,30 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { toast } from 'sonner';
 
 import { ArrowLeft, Star, Check, ShoppingBag, Heart, Share2, Minus, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getProductBySlug } from '@/data/shop';
+
+const WISHLIST_STORAGE_KEY = 'aman_wishlist';
+
+function readWishlist() {
+  try {
+    const raw = localStorage.getItem(WISHLIST_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch {
+    return [];
+  }
+}
 
 export function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const product = getProductBySlug(slug || '');
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [isLiked, setIsLiked] = useState(false);
+  const [isLiked, setIsLiked] = useState(() => (product ? readWishlist().includes(product.slug) : false));
   const [addedToCart, setAddedToCart] = useState(false);
+
 
   if (!product) {
     return (
@@ -27,11 +40,74 @@ export function ProductDetailPage() {
   const handleAddToCart = () => {
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2000);
+    toast.success('已加入购物车。', {
+      action: {
+        label: '撤销',
+        onClick: () => {
+          setAddedToCart(false);
+          toast.message('已撤销添加购物车。');
+        },
+      },
+    });
+  };
+
+  const handleWishlistToggle = () => {
+    const list = readWishlist();
+    const nextLiked = !isLiked;
+    const nextList = nextLiked ? [...new Set([...list, product.slug])] : list.filter((item) => item !== product.slug);
+
+    localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(nextList));
+    setIsLiked(nextLiked);
+
+    toast.success(nextLiked ? '已添加到心愿单。' : '已从心愿单移除。', {
+      action: {
+        label: '撤销',
+        onClick: () => {
+          localStorage.setItem(WISHLIST_STORAGE_KEY, JSON.stringify(list));
+          setIsLiked(!nextLiked);
+        },
+      },
+    });
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: product.name,
+      text: `Check out ${product.name} on Aman essentials.`,
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+        toast.success('分享成功。');
+        return;
+      }
+
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success('链接已复制。', {
+        action: {
+          label: '再次复制',
+          onClick: () => {
+            void navigator.clipboard.writeText(window.location.href);
+          },
+        },
+      });
+    } catch {
+      toast.error('分享失败，请重试。', {
+        action: {
+          label: '复制链接',
+          onClick: () => {
+            void navigator.clipboard.writeText(window.location.href);
+            toast.success('链接已复制。');
+          },
+        },
+      });
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#F5F0E8] pt-20">
-      {/* Breadcrumb */}
       <div className="container-aman py-6">
         <Link to="/shop" className="flex items-center gap-2 text-[#6B6B6B] hover:text-[#1A1A1A] transition-colors">
           <ArrowLeft className="w-4 h-4" />
@@ -39,17 +115,11 @@ export function ProductDetailPage() {
         </Link>
       </div>
 
-      {/* Product */}
       <div className="container-aman py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Images */}
           <div className="space-y-4">
             <div className="aspect-square bg-white border border-[#E5E0D8]">
-              <img
-                src={product.image}
-                alt={product.name}
-                className="w-full h-full object-cover"
-              />
+              <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
             </div>
             <div className="grid grid-cols-4 gap-2">
               {product.gallery.map((img, idx) => (
@@ -60,42 +130,25 @@ export function ProductDetailPage() {
             </div>
           </div>
 
-          {/* Details */}
           <div>
             <p className="text-sm text-[#9A9A9A] mb-2">{product.category}</p>
-            <h1 className="text-3xl md:text-4xl font-serif font-light text-[#1A1A1A] mb-4">
-              {product.name}
-            </h1>
+            <h1 className="text-3xl md:text-4xl font-serif font-light text-[#1A1A1A] mb-4">{product.name}</h1>
 
-            {/* Rating */}
             <div className="flex items-center gap-2 mb-4">
               <div className="flex items-center gap-1">
                 {[...Array(5)].map((_, i) => (
                   <Star
                     key={i}
-                    className={cn(
-                      'w-4 h-4',
-                      i < Math.floor(product.rating)
-                        ? 'fill-[#C9A962] text-[#C9A962]'
-                        : 'text-[#E5E0D8]'
-                    )}
+                    className={cn('w-4 h-4', i < Math.floor(product.rating) ? 'fill-[#C9A962] text-[#C9A962]' : 'text-[#E5E0D8]')}
                   />
                 ))}
               </div>
-              <span className="text-sm text-[#6B6B6B]">
-                {product.rating} ({product.reviewCount} reviews)
-              </span>
+              <span className="text-sm text-[#6B6B6B]">{product.rating} ({product.reviewCount} reviews)</span>
             </div>
 
-            {/* Price */}
-            <p className="text-2xl text-[#C9A962] font-medium mb-6">
-              ${product.price} {product.currency}
-            </p>
-
-            {/* Description */}
+            <p className="text-2xl text-[#C9A962] font-medium mb-6">${product.price} {product.currency}</p>
             <p className="text-[#6B6B6B] mb-6">{product.description}</p>
 
-            {/* Size Selection */}
             {product.sizes && (
               <div className="mb-6">
                 <label className="text-sm text-[#6B6B6B] mb-2 block">Size</label>
@@ -118,7 +171,6 @@ export function ProductDetailPage() {
               </div>
             )}
 
-            {/* Quantity */}
             <div className="mb-6">
               <label className="text-sm text-[#6B6B6B] mb-2 block">Quantity</label>
               <div className="flex items-center gap-2">
@@ -138,69 +190,41 @@ export function ProductDetailPage() {
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex gap-4 mb-8">
               <button
                 onClick={handleAddToCart}
-                className={cn(
-                  'flex-1 py-4 flex items-center justify-center gap-2 transition-colors',
-                  addedToCart
-                    ? 'bg-green-600 text-white'
-                    : 'bg-[#1A1A1A] text-white hover:bg-[#333]'
-                )}
+                className={cn('flex-1 py-4 flex items-center justify-center gap-2 transition-colors', addedToCart ? 'bg-green-600 text-white' : 'bg-[#1A1A1A] text-white hover:bg-[#333]')}
               >
-                {addedToCart ? (
-                  <>
-                    <Check className="w-5 h-5" />
-                    Added to Cart
-                  </>
-                ) : (
-                  <>
-                    <ShoppingBag className="w-5 h-5" />
-                    Add to Cart
-                  </>
-                )}
+                {addedToCart ? (<><Check className="w-5 h-5" />Added to Cart</>) : (<><ShoppingBag className="w-5 h-5" />Add to Cart</>)}
               </button>
               <button
-                onClick={() => setIsLiked(!isLiked)}
-                className={cn(
-                  'w-14 h-14 border flex items-center justify-center transition-colors',
-                  isLiked
-                    ? 'border-red-500 bg-red-500 text-white'
-                    : 'border-[#E5E0D8] hover:border-[#1A1A1A]'
-                )}
+                onClick={handleWishlistToggle}
+                className={cn('w-14 h-14 border flex items-center justify-center transition-colors', isLiked ? 'border-red-500 bg-red-500 text-white' : 'border-[#E5E0D8] hover:border-[#1A1A1A]')}
               >
                 <Heart className={cn('w-5 h-5', isLiked && 'fill-current')} />
               </button>
-              <button className="w-14 h-14 border border-[#E5E0D8] flex items-center justify-center hover:border-[#1A1A1A] transition-colors">
+              <button onClick={handleShare} className="w-14 h-14 border border-[#E5E0D8] flex items-center justify-center hover:border-[#1A1A1A] transition-colors">
                 <Share2 className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Benefits */}
             {product.benefits && (
               <div className="border-t border-[#E5E0D8] pt-6 mb-6">
                 <h3 className="text-lg font-serif font-light text-[#1A1A1A] mb-3">Benefits</h3>
                 <ul className="space-y-2">
                   {product.benefits.map((benefit, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-sm text-[#6B6B6B]">
-                      <Check className="w-4 h-4 text-[#C9A962] mt-0.5" />
-                      {benefit}
-                    </li>
+                    <li key={idx} className="flex items-start gap-2 text-sm text-[#6B6B6B]"><Check className="w-4 h-4 text-[#C9A962] mt-0.5" />{benefit}</li>
                   ))}
                 </ul>
               </div>
             )}
 
-            {/* Ingredients */}
             {product.ingredients && (
               <div className="border-t border-[#E5E0D8] pt-6">
                 <h3 className="text-lg font-serif font-light text-[#1A1A1A] mb-3">Key Ingredients</h3>
                 <div className="flex flex-wrap gap-2">
                   {product.ingredients.map((ingredient, idx) => (
-                    <span key={idx} className="px-3 py-1 bg-[#F5F0E8] text-sm text-[#6B6B6B]">
-                      {ingredient}
-                    </span>
+                    <span key={idx} className="px-3 py-1 bg-[#F5F0E8] text-sm text-[#6B6B6B]">{ingredient}</span>
                   ))}
                 </div>
               </div>

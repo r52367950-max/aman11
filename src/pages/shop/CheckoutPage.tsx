@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
+import { apiRequest } from '@/lib/api';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Check, CreditCard, Shield } from 'lucide-react';
@@ -20,11 +22,48 @@ export function CheckoutPage() {
     cvv: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
+
+  const submitOrder = async () => {
+    setIsSubmittingOrder(true);
+    try {
+      await apiRequest('/api/checkout/submit', {
+        method: 'POST',
+        body: { ...formData },
+      });
+      toast.success('订单提交成功。', {
+        action: {
+          label: '查看购物车',
+          onClick: () => {
+            window.location.href = '/shop/cart';
+          },
+        },
+      });
+    } catch (error) {
+      const description = error instanceof Error ? error.message : '订单提交失败。';
+      toast.error('订单提交失败', {
+        description,
+        action: {
+          label: '重试',
+          onClick: () => {
+            void submitOrder();
+          },
+        },
+      });
+      throw error;
+    } finally {
+      setIsSubmittingOrder(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step < 3) {
       setStep(step + 1);
+      return;
     }
+
+    await submitOrder();
   };
 
   return (
@@ -213,9 +252,10 @@ export function CheckoutPage() {
                 )}
                 <button
                   type="submit"
-                  className="ml-auto px-8 py-3 bg-[#1A1A1A] text-white hover:bg-[#333] transition-colors"
+                  disabled={isSubmittingOrder}
+                  className="ml-auto px-8 py-3 bg-[#1A1A1A] text-white hover:bg-[#333] transition-colors disabled:bg-[#9A9A9A]"
                 >
-                  {step === 3 ? 'Complete Order' : 'Continue'}
+                  {step === 3 ? (isSubmittingOrder ? 'Submitting...' : 'Complete Order') : 'Continue'}
                 </button>
               </div>
             </form>
