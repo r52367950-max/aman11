@@ -2,7 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { motion } from 'framer-motion';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
+import { apiRequest } from '@/lib/api';
 import {
   Calendar,
   Users,
@@ -24,6 +26,7 @@ const steps = ['Dates', 'Room', 'Details', 'Payment'];
 
 export function BookingPage() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const hotelSlug = searchParams.get('hotel');
   const roomId = searchParams.get('room');
   const hotel = hotelSlug ? getHotelBySlug(hotelSlug) : null;
@@ -46,6 +49,42 @@ export function BookingPage() {
   });
 
   const sectionRef = useRef<HTMLDivElement>(null);
+
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
+
+  const submitBooking = async () => {
+    setIsSubmittingBooking(true);
+    try {
+      await apiRequest('/api/booking/submit', {
+        method: 'POST',
+        body: {
+          hotelSlug,
+          roomId: formData.room,
+          ...formData,
+        },
+      });
+      toast.success('预订提交成功。', {
+        action: {
+          label: '查看确认页',
+          onClick: () => navigate('/book/confirmation'),
+        },
+      });
+      navigate('/book/confirmation');
+    } catch (error) {
+      const description = error instanceof Error ? error.message : '预订提交失败。';
+      toast.error('预订失败', {
+        description,
+        action: {
+          label: '重试',
+          onClick: () => {
+            void submitBooking();
+          },
+        },
+      });
+    } finally {
+      setIsSubmittingBooking(false);
+    }
+  };
 
   useEffect(() => {
     const elements = sectionRef.current?.querySelectorAll('.animate-in');
@@ -425,12 +464,15 @@ export function BookingPage() {
                   >
                     Back
                   </button>
-                  <Link
-                    to="/book/confirmation"
-                    className="px-8 py-3 bg-[#C9A962] text-white hover:bg-[#B8984D] transition-colors flex items-center gap-2"
+                  <button
+                    onClick={() => {
+                      void submitBooking();
+                    }}
+                    disabled={isSubmittingBooking}
+                    className="px-8 py-3 bg-[#C9A962] text-white hover:bg-[#B8984D] transition-colors flex items-center gap-2 disabled:bg-[#9A9A9A]"
                   >
-                    Complete Booking <Check className="w-4 h-4" />
-                  </Link>
+                    {isSubmittingBooking ? 'Submitting...' : 'Complete Booking'} <Check className="w-4 h-4" />
+                  </button>
                 </div>
               </motion.div>
             )}
