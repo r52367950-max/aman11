@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Check, CreditCard, Shield } from 'lucide-react';
-import { useCart } from '@/hooks/useLocalStorage';
+import { useCart } from '@/contexts/CartContext';
 import { calculateShopPricing } from '@/lib/pricing';
 
 const shippingMethods = [
@@ -35,15 +35,15 @@ export function CheckoutPage() {
     cvv: '',
   });
 
-  const { cart, cartTotal, clearCart } = useCart();
+  const { items, totalPrice, clearCart } = useCart();
 
   const pricing = useMemo(() => {
     const selectedShipping = formData.shippingMethod
       ? shippingMethods.find((method) => method.name === formData.shippingMethod)?.price
       : undefined;
 
-    return calculateShopPricing(cartTotal, selectedShipping);
-  }, [cartTotal, formData.shippingMethod]);
+    return calculateShopPricing(totalPrice, selectedShipping);
+  }, [totalPrice, formData.shippingMethod]);
 
   const shippingFee = pricing.shipping;
   const tax = pricing.tax;
@@ -89,7 +89,7 @@ export function CheckoutPage() {
       return;
     }
 
-    if (cart.length === 0) {
+    if (items.length === 0) {
       setSubmitError('Your cart is empty. Please add products before checkout.');
       return;
     }
@@ -293,11 +293,11 @@ export function CheckoutPage() {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm">
                   <span className="text-[#6B6B6B]">Subtotal</span>
-                  <span className="text-[#1A1A1A]">${cartTotal.toFixed(2)}</span>
+                  <span className="text-[#1A1A1A]">${totalPrice.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-[#6B6B6B]">Shipping</span>
-                  <span className="text-[#1A1A1A]">${shippingFee.toFixed(2)}</span>
+                  <span className="text-[#1A1A1A]">{shippingFee === 0 ? 'Free' : `$${shippingFee.toFixed(2)}`}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-[#6B6B6B]">Tax</span>
@@ -310,7 +310,7 @@ export function CheckoutPage() {
                   </div>
                 </div>
               </div>
-              {cart.length === 0 && !orderNumber && (
+              {items.length === 0 && !orderNumber && (
                 <p className="text-sm text-[#9A9A9A]">Your cart is currently empty. Add items before placing an order.</p>
               )}
             </div>
