@@ -89,6 +89,7 @@ export function CartPage() {
                       </div>
                       <button
                         onClick={() => removeItem(item.id)}
+                        aria-label={`Remove ${item.name} from cart`}
                         className="text-[#9A9A9A] hover:text-red-500 transition-colors"
                       >
                         <Trash2 className="w-5 h-5" />
@@ -98,6 +99,7 @@ export function CartPage() {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => updateQuantity(item.id, -1)}
+                          aria-label={`Decrease quantity for ${item.name}`}
                           className="w-8 h-8 border border-[#E5E0D8] flex items-center justify-center hover:border-[#1A1A1A] transition-colors"
                         >
                           <Minus className="w-4 h-4" />
@@ -105,6 +107,7 @@ export function CartPage() {
                         <span className="w-8 text-center">{item.quantity}</span>
                         <button
                           onClick={() => updateQuantity(item.id, 1)}
+                          aria-label={`Increase quantity for ${item.name}`}
                           className="w-8 h-8 border border-[#E5E0D8] flex items-center justify-center hover:border-[#1A1A1A] transition-colors"
                         >
                           <Plus className="w-4 h-4" />

@@ -165,10 +165,11 @@ export function BookingPage() {
                 <h2 className="text-2xl font-serif font-light text-[#1A1A1A] mb-6">Select Your Dates</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="text-sm text-[#6B6B6B] mb-2 block">Check-in Date</label>
+                    <label htmlFor="booking-checkin" className="text-sm text-[#6B6B6B] mb-2 block">Check-in Date</label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9A9A9A]" />
                       <input
+                        id="booking-checkin"
                         type="date"
                         value={formData.checkIn}
                         onChange={(e) => setFormData({ ...formData, checkIn: e.target.value })}
@@ -177,10 +178,11 @@ export function BookingPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm text-[#6B6B6B] mb-2 block">Check-out Date</label>
+                    <label htmlFor="booking-checkout" className="text-sm text-[#6B6B6B] mb-2 block">Check-out Date</label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9A9A9A]" />
                       <input
+                        id="booking-checkout"
                         type="date"
                         value={formData.checkOut}
                         onChange={(e) => setFormData({ ...formData, checkOut: e.target.value })}
@@ -189,10 +191,11 @@ export function BookingPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm text-[#6B6B6B] mb-2 block">Number of Guests</label>
+                    <label htmlFor="booking-guests" className="text-sm text-[#6B6B6B] mb-2 block">Number of Guests</label>
                     <div className="relative">
                       <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9A9A9A]" />
                       <select
+                        id="booking-guests"
                         value={formData.guests}
                         onChange={(e) => setFormData({ ...formData, guests: parseInt(e.target.value) })}
                         className="w-full pl-12 pr-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A] appearance-none bg-white"
@@ -297,8 +300,9 @@ export function BookingPage() {
                 <h2 className="text-2xl font-serif font-light text-[#1A1A1A] mb-6">Guest Details</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="text-sm text-[#6B6B6B] mb-2 block">First Name</label>
+                    <label htmlFor="booking-first-name" className="text-sm text-[#6B6B6B] mb-2 block">First Name</label>
                     <input
+                      id="booking-first-name"
                       type="text"
                       value={formData.firstName}
                       onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
@@ -306,8 +310,9 @@ export function BookingPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-sm text-[#6B6B6B] mb-2 block">Last Name</label>
+                    <label htmlFor="booking-last-name" className="text-sm text-[#6B6B6B] mb-2 block">Last Name</label>
                     <input
+                      id="booking-last-name"
                       type="text"
                       value={formData.lastName}
                       onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
@@ -315,8 +320,9 @@ export function BookingPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-sm text-[#6B6B6B] mb-2 block">Email</label>
+                    <label htmlFor="booking-email" className="text-sm text-[#6B6B6B] mb-2 block">Email</label>
                     <input
+                      id="booking-email"
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -324,8 +330,9 @@ export function BookingPage() {
                     />
                   </div>
                   <div>
-                    <label className="text-sm text-[#6B6B6B] mb-2 block">Phone</label>
+                    <label htmlFor="booking-phone" className="text-sm text-[#6B6B6B] mb-2 block">Phone</label>
                     <input
+                      id="booking-phone"
                       type="tel"
                       value={formData.phone}
                       onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -333,8 +340,9 @@ export function BookingPage() {
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="text-sm text-[#6B6B6B] mb-2 block">Special Requests</label>
+                    <label htmlFor="booking-special-requests" className="text-sm text-[#6B6B6B] mb-2 block">Special Requests</label>
                     <textarea
+                      id="booking-special-requests"
                       value={formData.specialRequests}
                       onChange={(e) => setFormData({ ...formData, specialRequests: e.target.value })}
                       rows={4}
@@ -370,10 +378,11 @@ export function BookingPage() {
                 <h2 className="text-2xl font-serif font-light text-[#1A1A1A] mb-6">Payment Details</h2>
                 <div className="space-y-6">
                   <div>
-                    <label className="text-sm text-[#6B6B6B] mb-2 block">Card Number</label>
+                    <label htmlFor="booking-card-number" className="text-sm text-[#6B6B6B] mb-2 block">Card Number</label>
                     <div className="relative">
                       <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9A9A9A]" />
                       <input
+                        id="booking-card-number"
                         type="text"
                         placeholder="1234 5678 9012 3456"
                         value={formData.cardNumber}
@@ -383,8 +392,9 @@ export function BookingPage() {
                     </div>
                   </div>
                   <div>
-                    <label className="text-sm text-[#6B6B6B] mb-2 block">Cardholder Name</label>
+                    <label htmlFor="booking-card-name" className="text-sm text-[#6B6B6B] mb-2 block">Cardholder Name</label>
                     <input
+                      id="booking-card-name"
                       type="text"
                       value={formData.cardName}
                       onChange={(e) => setFormData({ ...formData, cardName: e.target.value })}
@@ -393,8 +403,9 @@ export function BookingPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-6">
                     <div>
-                      <label className="text-sm text-[#6B6B6B] mb-2 block">Expiry Date</label>
+                      <label htmlFor="booking-card-expiry" className="text-sm text-[#6B6B6B] mb-2 block">Expiry Date</label>
                       <input
+                        id="booking-card-expiry"
                         type="text"
                         placeholder="MM/YY"
                         value={formData.expiry}
@@ -403,8 +414,9 @@ export function BookingPage() {
                       />
                     </div>
                     <div>
-                      <label className="text-sm text-[#6B6B6B] mb-2 block">CVV</label>
+                      <label htmlFor="booking-card-cvv" className="text-sm text-[#6B6B6B] mb-2 block">CVV</label>
                       <input
+                        id="booking-card-cvv"
                         type="text"
                         placeholder="123"
                         value={formData.cvv}

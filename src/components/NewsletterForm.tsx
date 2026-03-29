@@ -6,6 +6,15 @@ import { cn } from '@/lib/utils';
 export function NewsletterForm() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const inputId = 'newsletter-email';
+  const successMessageId = 'newsletter-success-message';
+  const errorMessageId = 'newsletter-error-message';
+  const describedBy =
+    status === 'error'
+      ? errorMessageId
+      : status === 'success'
+        ? successMessageId
+        : undefined;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,6 +37,7 @@ export function NewsletterForm() {
     <form onSubmit={handleSubmit} className="w-full max-w-md mx-auto">
       <div className="relative">
         <input
+          id={inputId}
           type="email"
           value={email}
           onChange={(e) => {
@@ -36,6 +46,7 @@ export function NewsletterForm() {
           }}
           placeholder="Email address"
           disabled={status === 'submitting' || status === 'success'}
+          aria-describedby={describedBy}
           className={cn(
             'w-full px-0 py-4 bg-transparent border-b-2 text-[#1A1A1A] placeholder:text-[#9A9A9A] focus:outline-none transition-colors duration-300',
             status === 'error' ? 'border-red-400' : 'border-[#E5E0D8] focus:border-[#1A1A1A]'
@@ -92,6 +103,9 @@ export function NewsletterForm() {
       <AnimatePresence>
         {status === 'success' && (
           <motion.p
+            id={successMessageId}
+            role="status"
+            aria-live="polite"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -102,6 +116,9 @@ export function NewsletterForm() {
         )}
         {status === 'error' && (
           <motion.p
+            id={errorMessageId}
+            role="status"
+            aria-live="polite"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}

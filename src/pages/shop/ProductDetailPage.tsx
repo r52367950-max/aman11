@@ -124,6 +124,7 @@ export function ProductDetailPage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  aria-label="Decrease quantity"
                   className="w-10 h-10 border border-[#E5E0D8] flex items-center justify-center hover:border-[#1A1A1A] transition-colors"
                 >
                   <Minus className="w-4 h-4" />
@@ -131,6 +132,7 @@ export function ProductDetailPage() {
                 <span className="w-12 text-center">{quantity}</span>
                 <button
                   onClick={() => setQuantity(quantity + 1)}
+                  aria-label="Increase quantity"
                   className="w-10 h-10 border border-[#E5E0D8] flex items-center justify-center hover:border-[#1A1A1A] transition-colors"
                 >
                   <Plus className="w-4 h-4" />
@@ -163,6 +165,7 @@ export function ProductDetailPage() {
               </button>
               <button
                 onClick={() => setIsLiked(!isLiked)}
+                aria-label={isLiked ? 'Remove from favorites' : 'Add to favorites'}
                 className={cn(
                   'w-14 h-14 border flex items-center justify-center transition-colors',
                   isLiked
@@ -172,7 +175,10 @@ export function ProductDetailPage() {
               >
                 <Heart className={cn('w-5 h-5', isLiked && 'fill-current')} />
               </button>
-              <button className="w-14 h-14 border border-[#E5E0D8] flex items-center justify-center hover:border-[#1A1A1A] transition-colors">
+              <button
+                aria-label="Share product"
+                className="w-14 h-14 border border-[#E5E0D8] flex items-center justify-center hover:border-[#1A1A1A] transition-colors"
+              >
                 <Share2 className="w-5 h-5" />
               </button>
             </div>
