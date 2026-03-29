@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Calendar, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { SEO } from '@/components/seo';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -111,6 +112,13 @@ export function JournalPage() {
 
   return (
     <div className="min-h-screen bg-[#F5F0E8] pt-20">
+      <SEO
+        title="The Journal"
+        description="Read Aman Journal stories on travel, wellness, dining, culture, and design across our global destinations."
+        canonical="https://aman.com/journal"
+        url="https://aman.com/journal"
+        image={featuredArticle.image}
+      />
       {/* Hero */}
       <div className="bg-[#1A1A1A] text-white py-16">
         <div className="container-aman">

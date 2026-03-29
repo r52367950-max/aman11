@@ -30,6 +30,7 @@ export function SEO({
   structuredData,
 }: SEOProps) {
   const fullTitle = title.includes('Aman') ? title : `${title} | Aman`;
+  const structuredDataId = 'aman-structured-data';
 
   useEffect(() => {
     // Update document title
@@ -88,21 +89,25 @@ export function SEO({
     }
 
     // Add structured data
+    const existingStructuredData = document.getElementById(structuredDataId) as HTMLScriptElement | null;
     if (structuredData) {
-      let script = document.querySelector('script[type="application/ld+json"]') as HTMLScriptElement;
+      let script = existingStructuredData;
       if (!script) {
         script = document.createElement('script');
+        script.id = structuredDataId;
         script.type = 'application/ld+json';
         document.head.appendChild(script);
       }
       script.textContent = JSON.stringify(structuredData);
+    } else if (existingStructuredData) {
+      existingStructuredData.remove();
     }
 
     // Cleanup function
     return () => {
       // Meta tags are not removed on unmount as they should persist
     };
-  }, [fullTitle, description, keywords, image, url, type, locale, siteName, twitterHandle, noIndex, canonical, structuredData]);
+  }, [fullTitle, description, keywords, image, url, type, locale, siteName, twitterHandle, noIndex, canonical, structuredData, structuredDataId]);
 
   return null;
 }

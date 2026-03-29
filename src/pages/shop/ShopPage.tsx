@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, Search, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getAllProducts, shopCategories } from '@/data/shop';
+import { SEO } from '@/components/seo';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -53,6 +54,13 @@ export function ShopPage() {
 
   return (
     <div className="min-h-screen bg-[#F5F0E8] pt-20">
+      <SEO
+        title="Aman Essentials Shop"
+        description="Shop Aman essentials including skincare, fragrance, and homeware inspired by Aman destinations."
+        canonical="https://aman.com/shop"
+        url="https://aman.com/shop"
+        image="/images/misc/aman-essentials.jpg"
+      />
       {/* Hero */}
       <div className="relative h-[50vh] overflow-hidden">
         <img

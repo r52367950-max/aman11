@@ -4,6 +4,7 @@ import { ArrowLeft, Calendar, Clock, Share2, Heart } from 'lucide-react';
 import { useState } from 'react';
 import { getArticleBySlug, getAllArticles } from '@/data/journal';
 import { isSafeSlug, sanitizeRichText } from '@/lib/security';
+import { SEO } from '@/components/seo';
 
 export function JournalArticlePage() {
   const { slug } = useParams<{ slug: string }>();
@@ -24,8 +25,40 @@ export function JournalArticlePage() {
     );
   }
 
+  const canonicalUrl = `https://aman.com/journal/${article.slug}`;
+  const articleStructuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: article.title,
+    description: article.excerpt,
+    image: [article.image],
+    datePublished: article.date,
+    author: {
+      '@type': 'Person',
+      name: article.author.name,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'Aman',
+      logo: {
+        '@type': 'ImageObject',
+        url: 'https://aman.com/logo.png',
+      },
+    },
+    mainEntityOfPage: canonicalUrl,
+  };
+
   return (
     <div className="min-h-screen bg-[#F5F0E8] pt-20">
+      <SEO
+        title={article.title}
+        description={article.excerpt}
+        canonical={canonicalUrl}
+        url={canonicalUrl}
+        image={article.image}
+        type="article"
+        structuredData={articleStructuredData}
+      />
       {/* Header Image */}
       <div className="relative h-[50vh] overflow-hidden">
         <img
