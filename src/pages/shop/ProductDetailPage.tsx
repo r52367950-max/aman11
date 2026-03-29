@@ -4,11 +4,13 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Star, Check, ShoppingBag, Heart, Share2, Minus, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getProductBySlug } from '@/data/shop';
+import { useCart } from '@/contexts/CartContext';
 
 export function ProductDetailPage() {
   const { slug } = useParams<{ slug: string }>();
   const product = getProductBySlug(slug || '');
   const [quantity, setQuantity] = useState(1);
+  const { addItem } = useCart();
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [isLiked, setIsLiked] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
@@ -25,6 +27,14 @@ export function ProductDetailPage() {
   }
 
   const handleAddToCart = () => {
+    addItem({
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      size: selectedSize ?? undefined,
+      quantity,
+    });
     setAddedToCart(true);
     setTimeout(() => setAddedToCart(false), 2000);
   };

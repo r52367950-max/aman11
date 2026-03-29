@@ -1,4 +1,12 @@
-import { createContext, useContext, useReducer, useCallback, useMemo, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useReducer,
+  useCallback,
+  useMemo,
+  useEffect,
+  type ReactNode,
+} from 'react';
 
 // Types
 export interface CartItem {
@@ -16,8 +24,10 @@ interface CartState {
   isOpen: boolean;
 }
 
+type CartItemInput = Omit<CartItem, 'quantity'> & { quantity?: number };
+
 type CartAction =
-  | { type: 'ADD_ITEM'; payload: Omit<CartItem, 'quantity'> }
+  | { type: 'ADD_ITEM'; payload: CartItemInput }
   | { type: 'REMOVE_ITEM'; payload: { id: string; size?: string } }
   | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number; size?: string } }
   | { type: 'CLEAR_CART' }
@@ -28,7 +38,7 @@ type CartAction =
 interface CartContextType {
   items: CartItem[];
   isOpen: boolean;
-  addItem: (item: Omit<CartItem, 'quantity'>) => void;
+  addItem: (item: CartItemInput) => void;
   removeItem: (id: string, size?: string) => void;
   updateQuantity: (id: string, quantity: number, size?: string) => void;
   clearCart: () => void;
@@ -39,11 +49,38 @@ interface CartContextType {
   totalPrice: number;
 }
 
+const STORAGE_KEY = 'aman-cart';
+
 // Initial state
 const initialState: CartState = {
   items: [],
   isOpen: false,
 };
+
+function initializeCartState(): CartState {
+  if (typeof window === 'undefined') {
+    return initialState;
+  }
+
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (!stored) {
+      return initialState;
+    }
+
+    const parsed = JSON.parse(stored) as CartItem[];
+    if (!Array.isArray(parsed)) {
+      return initialState;
+    }
+
+    return {
+      ...initialState,
+      items: parsed,
+    };
+  } catch {
+    return initialState;
+  }
+}
 
 // Reducer
 function cartReducer(state: CartState, action: CartAction): CartState {
@@ -52,13 +89,14 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       const existingItem = state.items.find(
         (item) => item.id === action.payload.id && item.size === action.payload.size
       );
+      const quantityToAdd = action.payload.quantity ?? 1;
 
       if (existingItem) {
         return {
           ...state,
           items: state.items.map((item) =>
             item.id === action.payload.id && item.size === action.payload.size
-              ? { ...item, quantity: item.quantity + 1 }
+              ? { ...item, quantity: item.quantity + quantityToAdd }
               : item
           ),
         };
@@ -66,7 +104,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
 
       return {
         ...state,
-        items: [...state.items, { ...action.payload, quantity: 1 }],
+        items: [...state.items, { ...action.payload, quantity: quantityToAdd }],
       };
     }
 
@@ -83,8 +121,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         return {
           ...state,
           items: state.items.filter(
-            (item) =>
-              !(item.id === action.payload.id && item.size === action.payload.size)
+            (item) => !(item.id === action.payload.id && item.size === action.payload.size)
           ),
         };
       }
@@ -133,9 +170,17 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 // Provider
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(cartReducer, initialState);
+  const [state, dispatch] = useReducer(cartReducer, initialState, initializeCartState);
 
-  const addItem = useCallback((item: Omit<CartItem, 'quantity'>) => {
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items));
+  }, [state.items]);
+
+  const addItem = useCallback((item: CartItemInput) => {
     dispatch({ type: 'ADD_ITEM', payload: item });
   }, []);
 

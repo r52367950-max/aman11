@@ -1,49 +1,13 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
-
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string;
-  size?: string;
-}
-
-const initialCart: CartItem[] = [
-  {
-    id: '1',
-    name: 'Purifying Cleanser',
-    price: 85,
-    quantity: 1,
-    image: '/images/misc/aman-essentials.jpg',
-    size: '100ml',
-  },
-  {
-    id: '2',
-    name: 'Aman Signature Fragrance',
-    price: 280,
-    quantity: 1,
-    image: '/images/misc/aman-essentials.jpg',
-    size: '50ml',
-  },
-];
+import { useCart } from '@/contexts/CartContext';
 
 export function CartPage() {
-  const [cart, setCart] = useState<CartItem[]>(initialCart);
+  const { items: cart, updateQuantity, removeItem } = useCart();
 
-  const updateQuantity = (id: string, delta: number) => {
-    setCart(cart.map(item =>
-      item.id === id
-        ? { ...item, quantity: Math.max(1, item.quantity + delta) }
-        : item
-    ));
-  };
-
-  const removeItem = (id: string) => {
-    setCart(cart.filter(item => item.id !== id));
+  const handleUpdateQuantity = (id: string, size: string | undefined, nextQuantity: number) => {
+    updateQuantity(id, Math.max(1, nextQuantity), size);
   };
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -88,7 +52,7 @@ export function CartPage() {
                         {item.size && <p className="text-sm text-[#9A9A9A]">{item.size}</p>}
                       </div>
                       <button
-                        onClick={() => removeItem(item.id)}
+                        onClick={() => removeItem(item.id, item.size)}
                         className="text-[#9A9A9A] hover:text-red-500 transition-colors"
                       >
                         <Trash2 className="w-5 h-5" />
@@ -97,14 +61,14 @@ export function CartPage() {
                     <div className="flex items-center justify-between mt-4">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => updateQuantity(item.id, -1)}
+                          onClick={() => handleUpdateQuantity(item.id, item.size, item.quantity - 1)}
                           className="w-8 h-8 border border-[#E5E0D8] flex items-center justify-center hover:border-[#1A1A1A] transition-colors"
                         >
                           <Minus className="w-4 h-4" />
                         </button>
                         <span className="w-8 text-center">{item.quantity}</span>
                         <button
-                          onClick={() => updateQuantity(item.id, 1)}
+                          onClick={() => handleUpdateQuantity(item.id, item.size, item.quantity + 1)}
                           className="w-8 h-8 border border-[#E5E0D8] flex items-center justify-center hover:border-[#1A1A1A] transition-colors"
                         >
                           <Plus className="w-4 h-4" />
