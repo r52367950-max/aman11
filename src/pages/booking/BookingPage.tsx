@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { motion } from 'framer-motion';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { z } from 'zod';
 import {
   Calendar,
   Users,
@@ -17,18 +18,63 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getHotelBySlug } from '@/data/hotels';
+import { calculateBookingTotal, calculateNights, parsePriceString } from '@/lib/pricing';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const steps = ['Dates', 'Room', 'Details', 'Payment'];
 
+const dateSchema = z
+  .object({
+    checkIn: z.string().min(1, 'Please select a check-in date.'),
+    checkOut: z.string().min(1, 'Please select a check-out date.'),
+  })
+  .refine(
+    ({ checkIn }) => {
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      return new Date(checkIn) >= startOfToday;
+    },
+    { path: ['checkIn'], message: 'Check-in date cannot be in the past.' }
+  )
+  .refine(({ checkIn, checkOut }) => new Date(checkOut) > new Date(checkIn), {
+    path: ['checkOut'],
+    message: 'Check-out must be after check-in.',
+  });
+
+const detailsSchema = z.object({
+  firstName: z.string().min(1, 'First name is required.'),
+  lastName: z.string().min(1, 'Last name is required.'),
+  email: z.string().email('Please enter a valid email address.'),
+  phone: z
+    .string()
+    .min(7, 'Please enter a valid phone number.')
+    .regex(/^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/, 'Please enter a valid phone number.'),
+});
+
+const paymentSchema = z.object({
+  cardNumber: z
+    .string()
+    .transform((value) => value.replace(/\s+/g, ''))
+    .pipe(z.string().min(13, 'Card number must be at least 13 digits.').max(19, 'Card number is too long.').regex(/^\d+$/, 'Card number must contain digits only.')),
+  cardName: z.string().min(1, 'Cardholder name is required.'),
+  expiry: z.string().regex(/^(0[1-9]|1[0-2])\/(\d{2})$/, 'Expiry must be in MM/YY format.'),
+  cvv: z.string().regex(/^\d{3,4}$/, 'CVV must be 3 or 4 digits.'),
+});
+
+const MOCK_BOOKING_DELAY_MS = 900;
+
 export function BookingPage() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const hotelSlug = searchParams.get('hotel');
   const roomId = searchParams.get('room');
   const hotel = hotelSlug ? getHotelBySlug(hotelSlug) : null;
 
   const [currentStep, setCurrentStep] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [stepErrors, setStepErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     checkIn: '',
     checkOut: '',
@@ -73,7 +119,40 @@ export function BookingPage() {
     return () => trigger.kill();
   }, [currentStep]);
 
+  const collectZodErrors = (issues: z.ZodIssue[]) =>
+    issues.reduce<Record<string, string>>((acc, issue) => {
+      const key = String(issue.path[0] ?? 'form');
+      if (!acc[key]) {
+        acc[key] = issue.message;
+      }
+      return acc;
+    }, {});
+
   const handleNext = () => {
+    let validation:
+      | ReturnType<typeof dateSchema.safeParse>
+      | ReturnType<typeof detailsSchema.safeParse>
+      | null = null;
+
+    if (currentStep === 0) {
+      validation = dateSchema.safeParse({ checkIn: formData.checkIn, checkOut: formData.checkOut });
+    } else if (currentStep === 2) {
+      validation = detailsSchema.safeParse({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+      });
+    }
+
+    if (validation && !validation.success) {
+      setStepErrors(collectZodErrors(validation.error.issues));
+      return;
+    }
+
+    setStepErrors({});
+    setSubmitError('');
+
     if (currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -83,21 +162,50 @@ export function BookingPage() {
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
+      setStepErrors({});
+    }
+  };
+
+  const submitBooking = async () => {
+    const validation = paymentSchema.safeParse({
+      cardNumber: formData.cardNumber,
+      cardName: formData.cardName,
+      expiry: formData.expiry,
+      cvv: formData.cvv,
+    });
+
+    if (!validation.success) {
+      setStepErrors(collectZodErrors(validation.error.issues));
+      return;
+    }
+
+    setStepErrors({});
+    setSubmitError('');
+    setIsSubmitting(true);
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, MOCK_BOOKING_DELAY_MS));
+      const mockResponse = { ok: true };
+
+      if (!mockResponse.ok) {
+        throw new Error('Booking failed');
+      }
+
+      navigate('/book/confirmation');
+    } catch {
+      setSubmitError('Booking failed. Please review your details and try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const selectedRoom = hotel?.rooms.find((r) => r.id === formData.room);
-  const nights = formData.checkIn && formData.checkOut
-    ? Math.ceil((new Date(formData.checkOut).getTime() - new Date(formData.checkIn).getTime()) / (1000 * 60 * 60 * 24))
-    : 0;
-  const roomPrice = selectedRoom
-    ? parseInt(selectedRoom.price.replace(/[^0-9]/g, ''))
-    : 0;
-  const totalPrice = roomPrice * nights;
+  const nights = calculateNights(formData.checkIn, formData.checkOut);
+  const roomPrice = selectedRoom ? parsePriceString(selectedRoom.price) : 0;
+  const totalPrice = calculateBookingTotal(roomPrice, nights);
 
   return (
     <div className="min-h-screen bg-[#F5F0E8] pt-20">
-      {/* Header */}
       <div className="bg-[#1A1A1A] text-white py-8">
         <div className="container-aman">
           <Link to={hotel ? `/hotels/${hotel.slug}` : '/hotels'} className="flex items-center gap-2 text-white/70 hover:text-white transition-colors mb-4">
@@ -105,144 +213,78 @@ export function BookingPage() {
             <span className="text-sm">Back</span>
           </Link>
           <h1 className="text-3xl md:text-4xl font-serif font-light">Book Your Stay</h1>
-          {hotel && (
-            <p className="text-white/70 mt-2">
-              at {hotel.name}, {hotel.location}
-            </p>
-          )}
+          {hotel && <p className="text-white/70 mt-2">at {hotel.name}, {hotel.location}</p>}
         </div>
       </div>
 
-      {/* Progress Steps */}
       <div className="bg-white border-b border-[#E5E0D8]">
         <div className="container-aman py-6">
           <div className="flex items-center justify-center">
             {steps.map((step, index) => (
               <div key={step} className="flex items-center">
-                <div
-                  className={cn(
-                    'w-10 h-10 flex items-center justify-center rounded-full transition-all',
-                    index <= currentStep
-                      ? 'bg-[#C9A962] text-white'
-                      : 'bg-[#F5F0E8] text-[#9A9A9A]'
-                  )}
-                >
-                  {index < currentStep ? (
-                    <Check className="w-5 h-5" />
-                  ) : (
-                    <span className="text-sm">{index + 1}</span>
-                  )}
+                <div className={cn('w-10 h-10 flex items-center justify-center rounded-full transition-all', index <= currentStep ? 'bg-[#C9A962] text-white' : 'bg-[#F5F0E8] text-[#9A9A9A]')}>
+                  {index < currentStep ? <Check className="w-5 h-5" /> : <span className="text-sm">{index + 1}</span>}
                 </div>
-                <span
-                  className={cn(
-                    'ml-2 mr-4 text-sm hidden md:block',
-                    index <= currentStep ? 'text-[#1A1A1A]' : 'text-[#9A9A9A]'
-                  )}
-                >
+                <span className={cn('ml-2 mr-4 text-sm hidden md:block', index <= currentStep ? 'text-[#1A1A1A]' : 'text-[#9A9A9A]')}>
                   {step}
                 </span>
-                {index < steps.length - 1 && (
-                  <ChevronRight className="w-4 h-4 text-[#9A9A9A] mx-2" />
-                )}
+                {index < steps.length - 1 && <ChevronRight className="w-4 h-4 text-[#9A9A9A] mx-2" />}
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Content */}
       <div ref={sectionRef} className="container-aman py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Form */}
           <div className="lg:col-span-2">
-            {/* Step 1: Dates */}
             {currentStep === 0 && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="animate-in opacity-0 bg-white border border-[#E5E0D8] p-8"
-              >
+              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="animate-in opacity-0 bg-white border border-[#E5E0D8] p-8">
                 <h2 className="text-2xl font-serif font-light text-[#1A1A1A] mb-6">Select Your Dates</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="text-sm text-[#6B6B6B] mb-2 block">Check-in Date</label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9A9A9A]" />
-                      <input
-                        type="date"
-                        value={formData.checkIn}
-                        onChange={(e) => setFormData({ ...formData, checkIn: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
-                      />
+                      <input type="date" value={formData.checkIn} onChange={(e) => setFormData({ ...formData, checkIn: e.target.value })} className="w-full pl-12 pr-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]" />
                     </div>
+                    {stepErrors.checkIn && <p className="text-sm text-red-600 mt-2">{stepErrors.checkIn}</p>}
                   </div>
                   <div>
                     <label className="text-sm text-[#6B6B6B] mb-2 block">Check-out Date</label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9A9A9A]" />
-                      <input
-                        type="date"
-                        value={formData.checkOut}
-                        onChange={(e) => setFormData({ ...formData, checkOut: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
-                      />
+                      <input type="date" value={formData.checkOut} onChange={(e) => setFormData({ ...formData, checkOut: e.target.value })} className="w-full pl-12 pr-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]" />
                     </div>
+                    {stepErrors.checkOut && <p className="text-sm text-red-600 mt-2">{stepErrors.checkOut}</p>}
                   </div>
                   <div>
                     <label className="text-sm text-[#6B6B6B] mb-2 block">Number of Guests</label>
                     <div className="relative">
                       <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9A9A9A]" />
-                      <select
-                        value={formData.guests}
-                        onChange={(e) => setFormData({ ...formData, guests: parseInt(e.target.value) })}
-                        className="w-full pl-12 pr-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A] appearance-none bg-white"
-                      >
+                      <select value={formData.guests} onChange={(e) => setFormData({ ...formData, guests: parseInt(e.target.value, 10) })} className="w-full pl-12 pr-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A] appearance-none bg-white">
                         {[1, 2, 3, 4, 5, 6].map((n) => (
-                          <option key={n} value={n}>
-                            {n} Guest{n > 1 ? 's' : ''}
-                          </option>
+                          <option key={n} value={n}>{n} Guest{n > 1 ? 's' : ''}</option>
                         ))}
                       </select>
                     </div>
                   </div>
                 </div>
                 <div className="mt-8 flex justify-end">
-                  <button
-                    onClick={handleNext}
-                    disabled={!formData.checkIn || !formData.checkOut}
-                    className="px-8 py-3 bg-[#1A1A1A] text-white disabled:bg-[#9A9A9A] hover:bg-[#333] transition-colors flex items-center gap-2"
-                  >
+                  <button onClick={handleNext} className="px-8 py-3 bg-[#1A1A1A] text-white hover:bg-[#333] transition-colors flex items-center gap-2">
                     Continue <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
               </motion.div>
             )}
 
-            {/* Step 2: Room Selection */}
             {currentStep === 1 && hotel && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="animate-in opacity-0 space-y-6"
-              >
+              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="animate-in opacity-0 space-y-6">
                 <h2 className="text-2xl font-serif font-light text-[#1A1A1A]">Select Your Room</h2>
                 {hotel.rooms.map((room) => (
-                  <div
-                    key={room.id}
-                    onClick={() => setFormData({ ...formData, room: room.id })}
-                    className={cn(
-                      'bg-white border p-6 cursor-pointer transition-all',
-                      formData.room === room.id
-                        ? 'border-[#C9A962] ring-1 ring-[#C9A962]'
-                        : 'border-[#E5E0D8] hover:border-[#C9A962]'
-                    )}
-                  >
+                  <div key={room.id} onClick={() => setFormData({ ...formData, room: room.id })} className={cn('bg-white border p-6 cursor-pointer transition-all', formData.room === room.id ? 'border-[#C9A962] ring-1 ring-[#C9A962]' : 'border-[#E5E0D8] hover:border-[#C9A962]')}>
                     <div className="flex flex-col md:flex-row gap-6">
-                      <img
-                        src={room.image}
-                        alt={room.name}
-                        className="w-full md:w-48 h-32 object-cover"
-                      />
+                      <img src={room.image} alt={room.name} className="w-full md:w-48 h-32 object-cover" />
                       <div className="flex-1">
                         <div className="flex items-start justify-between">
                           <div>
@@ -257,12 +299,7 @@ export function BookingPage() {
                         <p className="text-[#6B6B6B] mt-3 text-sm">{room.description}</p>
                         <div className="flex flex-wrap gap-2 mt-3">
                           {room.features.map((feature) => (
-                            <span
-                              key={feature}
-                              className="px-2 py-1 bg-[#F5F0E8] text-xs text-[#6B6B6B]"
-                            >
-                              {feature}
-                            </span>
+                            <span key={feature} className="px-2 py-1 bg-[#F5F0E8] text-xs text-[#6B6B6B]">{feature}</span>
                           ))}
                         </div>
                       </div>
@@ -270,173 +307,102 @@ export function BookingPage() {
                   </div>
                 ))}
                 <div className="flex justify-between">
-                  <button
-                    onClick={handleBack}
-                    className="px-8 py-3 border border-[#1A1A1A] text-[#1A1A1A] hover:bg-[#1A1A1A] hover:text-white transition-colors"
-                  >
-                    Back
-                  </button>
-                  <button
-                    onClick={handleNext}
-                    disabled={!formData.room}
-                    className="px-8 py-3 bg-[#1A1A1A] text-white disabled:bg-[#9A9A9A] hover:bg-[#333] transition-colors flex items-center gap-2"
-                  >
+                  <button onClick={handleBack} className="px-8 py-3 border border-[#1A1A1A] text-[#1A1A1A] hover:bg-[#1A1A1A] hover:text-white transition-colors">Back</button>
+                  <button onClick={handleNext} disabled={!formData.room} className="px-8 py-3 bg-[#1A1A1A] text-white disabled:bg-[#9A9A9A] hover:bg-[#333] transition-colors flex items-center gap-2">
                     Continue <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
               </motion.div>
             )}
 
-            {/* Step 3: Guest Details */}
             {currentStep === 2 && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="animate-in opacity-0 bg-white border border-[#E5E0D8] p-8"
-              >
+              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="animate-in opacity-0 bg-white border border-[#E5E0D8] p-8">
                 <h2 className="text-2xl font-serif font-light text-[#1A1A1A] mb-6">Guest Details</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="text-sm text-[#6B6B6B] mb-2 block">First Name</label>
-                    <input
-                      type="text"
-                      value={formData.firstName}
-                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                      className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
-                    />
+                    <input type="text" value={formData.firstName} onChange={(e) => setFormData({ ...formData, firstName: e.target.value })} className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]" />
+                    {stepErrors.firstName && <p className="text-sm text-red-600 mt-2">{stepErrors.firstName}</p>}
                   </div>
                   <div>
                     <label className="text-sm text-[#6B6B6B] mb-2 block">Last Name</label>
-                    <input
-                      type="text"
-                      value={formData.lastName}
-                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                      className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
-                    />
+                    <input type="text" value={formData.lastName} onChange={(e) => setFormData({ ...formData, lastName: e.target.value })} className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]" />
+                    {stepErrors.lastName && <p className="text-sm text-red-600 mt-2">{stepErrors.lastName}</p>}
                   </div>
                   <div>
                     <label className="text-sm text-[#6B6B6B] mb-2 block">Email</label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
-                    />
+                    <input type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]" />
+                    {stepErrors.email && <p className="text-sm text-red-600 mt-2">{stepErrors.email}</p>}
                   </div>
                   <div>
                     <label className="text-sm text-[#6B6B6B] mb-2 block">Phone</label>
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
-                    />
+                    <input type="tel" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]" />
+                    {stepErrors.phone && <p className="text-sm text-red-600 mt-2">{stepErrors.phone}</p>}
                   </div>
                   <div className="md:col-span-2">
                     <label className="text-sm text-[#6B6B6B] mb-2 block">Special Requests</label>
-                    <textarea
-                      value={formData.specialRequests}
-                      onChange={(e) => setFormData({ ...formData, specialRequests: e.target.value })}
-                      rows={4}
-                      className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A] resize-none"
-                    />
+                    <textarea value={formData.specialRequests} onChange={(e) => setFormData({ ...formData, specialRequests: e.target.value })} rows={4} className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A] resize-none" />
                   </div>
                 </div>
                 <div className="flex justify-between mt-8">
-                  <button
-                    onClick={handleBack}
-                    className="px-8 py-3 border border-[#1A1A1A] text-[#1A1A1A] hover:bg-[#1A1A1A] hover:text-white transition-colors"
-                  >
-                    Back
-                  </button>
-                  <button
-                    onClick={handleNext}
-                    disabled={!formData.firstName || !formData.lastName || !formData.email}
-                    className="px-8 py-3 bg-[#1A1A1A] text-white disabled:bg-[#9A9A9A] hover:bg-[#333] transition-colors flex items-center gap-2"
-                  >
+                  <button onClick={handleBack} className="px-8 py-3 border border-[#1A1A1A] text-[#1A1A1A] hover:bg-[#1A1A1A] hover:text-white transition-colors">Back</button>
+                  <button onClick={handleNext} className="px-8 py-3 bg-[#1A1A1A] text-white hover:bg-[#333] transition-colors flex items-center gap-2">
                     Continue <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
               </motion.div>
             )}
 
-            {/* Step 4: Payment */}
             {currentStep === 3 && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="animate-in opacity-0 bg-white border border-[#E5E0D8] p-8"
-              >
+              <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="animate-in opacity-0 bg-white border border-[#E5E0D8] p-8">
                 <h2 className="text-2xl font-serif font-light text-[#1A1A1A] mb-6">Payment Details</h2>
                 <div className="space-y-6">
                   <div>
                     <label className="text-sm text-[#6B6B6B] mb-2 block">Card Number</label>
                     <div className="relative">
                       <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9A9A9A]" />
-                      <input
-                        type="text"
-                        placeholder="1234 5678 9012 3456"
-                        value={formData.cardNumber}
-                        onChange={(e) => setFormData({ ...formData, cardNumber: e.target.value })}
-                        className="w-full pl-12 pr-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
-                      />
+                      <input type="text" placeholder="1234 5678 9012 3456" value={formData.cardNumber} onChange={(e) => setFormData({ ...formData, cardNumber: e.target.value })} className="w-full pl-12 pr-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]" />
                     </div>
+                    {stepErrors.cardNumber && <p className="text-sm text-red-600 mt-2">{stepErrors.cardNumber}</p>}
                   </div>
                   <div>
                     <label className="text-sm text-[#6B6B6B] mb-2 block">Cardholder Name</label>
-                    <input
-                      type="text"
-                      value={formData.cardName}
-                      onChange={(e) => setFormData({ ...formData, cardName: e.target.value })}
-                      className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
-                    />
+                    <input type="text" value={formData.cardName} onChange={(e) => setFormData({ ...formData, cardName: e.target.value })} className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]" />
+                    {stepErrors.cardName && <p className="text-sm text-red-600 mt-2">{stepErrors.cardName}</p>}
                   </div>
                   <div className="grid grid-cols-2 gap-6">
                     <div>
                       <label className="text-sm text-[#6B6B6B] mb-2 block">Expiry Date</label>
-                      <input
-                        type="text"
-                        placeholder="MM/YY"
-                        value={formData.expiry}
-                        onChange={(e) => setFormData({ ...formData, expiry: e.target.value })}
-                        className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
-                      />
+                      <input type="text" placeholder="MM/YY" value={formData.expiry} onChange={(e) => setFormData({ ...formData, expiry: e.target.value })} className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]" />
+                      {stepErrors.expiry && <p className="text-sm text-red-600 mt-2">{stepErrors.expiry}</p>}
                     </div>
                     <div>
                       <label className="text-sm text-[#6B6B6B] mb-2 block">CVV</label>
-                      <input
-                        type="text"
-                        placeholder="123"
-                        value={formData.cvv}
-                        onChange={(e) => setFormData({ ...formData, cvv: e.target.value })}
-                        className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
-                      />
+                      <input type="text" placeholder="123" value={formData.cvv} onChange={(e) => setFormData({ ...formData, cvv: e.target.value })} className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]" />
+                      {stepErrors.cvv && <p className="text-sm text-red-600 mt-2">{stepErrors.cvv}</p>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 p-4 bg-[#F5F0E8]">
                     <Shield className="w-5 h-5 text-green-600" />
                     <span className="text-sm text-[#6B6B6B]">Your payment is secured with 256-bit SSL encryption</span>
                   </div>
+                  {submitError && (
+                    <div className="border border-red-200 bg-red-50 p-4 text-sm text-red-700 flex items-center justify-between gap-3">
+                      <span>{submitError}</span>
+                      <button type="button" onClick={submitBooking} disabled={isSubmitting} className="underline underline-offset-2 disabled:opacity-60">Retry</button>
+                    </div>
+                  )}
                 </div>
                 <div className="flex justify-between mt-8">
-                  <button
-                    onClick={handleBack}
-                    className="px-8 py-3 border border-[#1A1A1A] text-[#1A1A1A] hover:bg-[#1A1A1A] hover:text-white transition-colors"
-                  >
-                    Back
+                  <button onClick={handleBack} className="px-8 py-3 border border-[#1A1A1A] text-[#1A1A1A] hover:bg-[#1A1A1A] hover:text-white transition-colors">Back</button>
+                  <button type="button" onClick={submitBooking} disabled={isSubmitting} className="px-8 py-3 bg-[#C9A962] text-white hover:bg-[#B8984D] disabled:opacity-60 transition-colors flex items-center gap-2">
+                    {isSubmitting ? 'Submitting...' : 'Complete Booking'} <Check className="w-4 h-4" />
                   </button>
-                  <Link
-                    to="/book/confirmation"
-                    className="px-8 py-3 bg-[#C9A962] text-white hover:bg-[#B8984D] transition-colors flex items-center gap-2"
-                  >
-                    Complete Booking <Check className="w-4 h-4" />
-                  </Link>
                 </div>
               </motion.div>
             )}
           </div>
 
-          {/* Summary */}
           <div className="lg:col-span-1">
             <div className="sticky top-40 bg-white border border-[#E5E0D8] p-6">
               <h3 className="text-lg font-serif font-light text-[#1A1A1A] mb-4">Booking Summary</h3>
@@ -454,9 +420,7 @@ export function BookingPage() {
                       <Calendar className="w-5 h-5 text-[#C9A962]" />
                       <div>
                         <p className="text-sm text-[#9A9A9A]">Dates</p>
-                        <p className="text-[#1A1A1A]">
-                          {formData.checkIn} - {formData.checkOut}
-                        </p>
+                        <p className="text-[#1A1A1A]">{formData.checkIn} - {formData.checkOut}</p>
                       </div>
                     </div>
                   )}
@@ -495,9 +459,7 @@ export function BookingPage() {
                   <div className="border-t border-[#E5E0D8] pt-4 mt-4">
                     <div className="flex justify-between">
                       <span className="text-lg font-medium text-[#1A1A1A]">Total</span>
-                      <span className="text-xl text-[#C9A962] font-medium">
-                        ${totalPrice.toLocaleString()}
-                      </span>
+                      <span className="text-xl text-[#C9A962] font-medium">${totalPrice.toLocaleString()}</span>
                     </div>
                   </div>
                 </>
