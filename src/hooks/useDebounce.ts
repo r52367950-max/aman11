@@ -90,28 +90,8 @@ export function useThrottledCallback<T extends (...args: unknown[]) => unknown>(
  * @returns Whether the user has stopped typing
  */
 export function useTypingStatus(value: string, delay: number = 500): boolean {
-  const [isTyping, setIsTyping] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    setIsTyping(true);
-
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-
-    timeoutRef.current = setTimeout(() => {
-      setIsTyping(false);
-    }, delay);
-
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, [value, delay]);
-
-  return isTyping;
+  const debouncedValue = useDebounce(value, delay);
+  return value !== debouncedValue;
 }
 
 /**

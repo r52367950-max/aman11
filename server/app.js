@@ -133,10 +133,28 @@ const server = http.createServer(async (req, res) => {
         return json(res, 401, { code: 'AUTH_TOKEN_EXPIRED', message: 'Refresh token expired or revoked' });
       }
 
+      const currentIp = req.socket.remoteAddress ?? 'unknown';
+      const currentUserAgent = req.headers['user-agent'] ?? 'unknown';
+      if (stored.ip !== currentIp || stored.userAgent !== currentUserAgent) {
+        revokeRefreshToken(hashToken(refreshToken));
+        clearRefreshCookie(res);
+        return json(res, 401, { code: 'AUTH_INVALID_TOKEN', message: 'Refresh token context mismatch' });
+      }
+
       const user = findUserByLoginId(tokenPayload.sub);
       if (!user) {
         return json(res, 401, { code: 'AUTH_INVALID_TOKEN', message: 'User not found' });
       }
+
+      revokeRefreshToken(hashToken(refreshToken));
+      const nextRefreshToken = createRefreshToken(user);
+      storeRefreshToken(hashToken(nextRefreshToken), {
+        userId: user.id,
+        expiresAt: Date.now() + authConfig.refreshTtlSeconds * 1000,
+        ip: currentIp,
+        userAgent: currentUserAgent,
+      });
+      setRefreshCookie(res, nextRefreshToken);
 
       return json(res, 200, { accessToken: createAccessToken(user), expiresIn: authConfig.accessTtlSeconds });
     }
@@ -154,12 +172,12 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (req.method === 'POST' && url.pathname === '/api/auth/logout-all') {
-      const body = await readBody(req);
-      if (!body.userId || typeof body.userId !== 'string') {
-        return json(res, 400, { code: 'AUTH_INVALID_REQUEST', message: 'userId is required' });
+      const authUser = authenticateAccessRequest(req);
+      if (!authUser) {
+        return json(res, 401, { code: 'AUTH_INVALID_TOKEN', message: 'Access token required' });
       }
 
-      revokeRefreshTokensForUser(body.userId);
+      revokeRefreshTokensForUser(authUser.id);
       clearRefreshCookie(res);
       return json(res, 200, { ok: true });
     }
@@ -204,7 +222,9 @@ function createRefreshToken(user) {
 }
 
 function isRateLimited(req) {
-  const key = req.socket.remoteAddress ?? 'unknown';
+  const forwardedFor = req.headers['x-forwarded-for'];
+  const proxyIp = typeof forwardedFor === 'string' ? forwardedFor.split(',')[0]?.trim() : '';
+  const key = proxyIp || req.socket.remoteAddress || 'unknown';
   const now = Date.now();
   const attempts = authAttempts.get(key) ?? [];
   const valid = attempts.filter((timestamp) => now - timestamp < RATE_WINDOW_MS);
@@ -259,10 +279,19 @@ function readCookie(req, name) {
 async function readBody(req) {
   return new Promise((resolve, reject) => {
     const chunks = [];
+    let totalLength = 0;
+    let aborted = false;
 
     req.on('data', (chunk) => {
+      if (aborted) {
+        return;
+      }
+
       chunks.push(chunk);
-      if (Buffer.concat(chunks).length > 16 * 1024) {
+      totalLength += chunk.length;
+      if (totalLength > 16 * 1024) {
+        aborted = true;
+        req.destroy();
         reject(new Error('Payload too large'));
       }
     });
@@ -302,4 +331,29 @@ function setRefreshCookie(res, token) {
 
 function clearRefreshCookie(res) {
   res.setHeader('Set-Cookie', 'aman_rt=; HttpOnly; SameSite=Strict; Path=/api/auth; Max-Age=0');
+}
+
+function authenticateAccessRequest(req) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+
+  const token = authHeader.slice('Bearer '.length).trim();
+  if (!token) {
+    return null;
+  }
+
+  let tokenPayload;
+  try {
+    tokenPayload = verifyToken(token, authConfig.jwtSecret);
+  } catch {
+    return null;
+  }
+
+  if (tokenPayload.type !== 'access' || typeof tokenPayload.sub !== 'string') {
+    return null;
+  }
+
+  return findUserByLoginId(tokenPayload.sub);
 }
