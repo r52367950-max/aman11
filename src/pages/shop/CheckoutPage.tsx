@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Check, CreditCard, Shield } from 'lucide-react';
+import { useCart } from '@/contexts/CartContext';
 
 export function CheckoutPage() {
   const [step, setStep] = useState(1);
+  const { items } = useCart();
   const [formData, setFormData] = useState({
     email: '',
     firstName: '',
@@ -19,6 +21,12 @@ export function CheckoutPage() {
     expiry: '',
     cvv: '',
   });
+
+
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const shipping = items.length > 0 ? (subtotal > 100 ? 0 : 15) : 0;
+  const tax = subtotal * 0.08;
+  const total = subtotal + shipping + tax;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -228,20 +236,20 @@ export function CheckoutPage() {
               <div className="space-y-3 mb-6">
                 <div className="flex justify-between text-sm">
                   <span className="text-[#6B6B6B]">Subtotal</span>
-                  <span className="text-[#1A1A1A]">$365</span>
+                  <span className="text-[#1A1A1A]">${subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-[#6B6B6B]">Shipping</span>
-                  <span className="text-[#1A1A1A]">$15</span>
+                  <span className="text-[#1A1A1A]">{shipping === 0 ? 'Free' : `$${shipping.toFixed(2)}`}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-[#6B6B6B]">Tax</span>
-                  <span className="text-[#1A1A1A]">$30.40</span>
+                  <span className="text-[#1A1A1A]">${tax.toFixed(2)}</span>
                 </div>
                 <div className="border-t border-[#E5E0D8] pt-3">
                   <div className="flex justify-between">
                     <span className="text-[#1A1A1A] font-medium">Total</span>
-                    <span className="text-xl text-[#C9A962] font-medium">$410.40</span>
+                    <span className="text-xl text-[#C9A962] font-medium">${total.toFixed(2)}</span>
                   </div>
                 </div>
               </div>

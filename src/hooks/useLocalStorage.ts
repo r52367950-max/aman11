@@ -96,7 +96,7 @@ export interface CartItem {
   size?: string;
 }
 
-export function useCart() {
+export function usePersistentCartDraft() {
   const [cart, setCart] = useLocalStorage<CartItem[]>('aman-cart', []);
 
   const addToCart = useCallback((item: Omit<CartItem, 'quantity'>) => {
