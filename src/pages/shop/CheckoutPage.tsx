@@ -72,59 +72,94 @@ export function CheckoutPage() {
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                   <h2 className="text-2xl font-serif font-light text-[#1A1A1A] mb-6">Contact Information</h2>
                   <div className="space-y-4">
-                    <input
-                      type="email"
-                      placeholder="Email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
-                    />
-                    <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="checkout-email" className="text-sm text-[#6B6B6B] mb-2 block">
+                        Email
+                      </label>
                       <input
-                        type="text"
-                        placeholder="First Name"
-                        value={formData.firstName}
-                        onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                        className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Last Name"
-                        value={formData.lastName}
-                        onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                        id="checkout-email"
+                        type="email"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
                       />
                     </div>
-                    <input
-                      type="text"
-                      placeholder="Address"
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
-                    />
                     <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="checkout-first-name" className="text-sm text-[#6B6B6B] mb-2 block">
+                          First Name
+                        </label>
+                        <input
+                          id="checkout-first-name"
+                          type="text"
+                          value={formData.firstName}
+                          onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                          className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="checkout-last-name" className="text-sm text-[#6B6B6B] mb-2 block">
+                          Last Name
+                        </label>
+                        <input
+                          id="checkout-last-name"
+                          type="text"
+                          value={formData.lastName}
+                          onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                          className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="checkout-address" className="text-sm text-[#6B6B6B] mb-2 block">
+                        Address
+                      </label>
                       <input
+                        id="checkout-address"
                         type="text"
-                        placeholder="City"
-                        value={formData.city}
-                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                        className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Postal Code"
-                        value={formData.postalCode}
-                        onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                         className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
                       />
                     </div>
-                    <input
-                      type="tel"
-                      placeholder="Phone"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
-                    />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label htmlFor="checkout-city" className="text-sm text-[#6B6B6B] mb-2 block">
+                          City
+                        </label>
+                        <input
+                          id="checkout-city"
+                          type="text"
+                          value={formData.city}
+                          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                          className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="checkout-postal-code" className="text-sm text-[#6B6B6B] mb-2 block">
+                          Postal Code
+                        </label>
+                        <input
+                          id="checkout-postal-code"
+                          type="text"
+                          value={formData.postalCode}
+                          onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+                          className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label htmlFor="checkout-phone" className="text-sm text-[#6B6B6B] mb-2 block">
+                        Phone
+                      </label>
+                      <input
+                        id="checkout-phone"
+                        type="tel"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
+                      />
+                    </div>
                   </div>
                 </motion.div>
               )}
@@ -161,37 +196,56 @@ export function CheckoutPage() {
                   <h2 className="text-2xl font-serif font-light text-[#1A1A1A] mb-6">Payment</h2>
                   <div className="space-y-4">
                     <div className="relative">
+                      <label htmlFor="checkout-card-number" className="text-sm text-[#6B6B6B] mb-2 block">
+                        Card Number
+                      </label>
                       <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#9A9A9A]" />
                       <input
+                        id="checkout-card-number"
                         type="text"
-                        placeholder="Card Number"
                         value={formData.cardNumber}
                         onChange={(e) => setFormData({ ...formData, cardNumber: e.target.value })}
                         className="w-full pl-12 pr-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
                       />
                     </div>
-                    <input
-                      type="text"
-                      placeholder="Cardholder Name"
-                      value={formData.cardName}
-                      onChange={(e) => setFormData({ ...formData, cardName: e.target.value })}
-                      className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
-                    />
+                    <div>
+                      <label htmlFor="checkout-card-name" className="text-sm text-[#6B6B6B] mb-2 block">
+                        Cardholder Name
+                      </label>
+                      <input
+                        id="checkout-card-name"
+                        type="text"
+                        value={formData.cardName}
+                        onChange={(e) => setFormData({ ...formData, cardName: e.target.value })}
+                        className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
+                      />
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <input
-                        type="text"
-                        placeholder="MM/YY"
-                        value={formData.expiry}
-                        onChange={(e) => setFormData({ ...formData, expiry: e.target.value })}
-                        className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
-                      />
-                      <input
-                        type="text"
-                        placeholder="CVV"
-                        value={formData.cvv}
-                        onChange={(e) => setFormData({ ...formData, cvv: e.target.value })}
-                        className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
-                      />
+                      <div>
+                        <label htmlFor="checkout-expiry" className="text-sm text-[#6B6B6B] mb-2 block">
+                          Expiry Date
+                        </label>
+                        <input
+                          id="checkout-expiry"
+                          type="text"
+                          placeholder="MM/YY"
+                          value={formData.expiry}
+                          onChange={(e) => setFormData({ ...formData, expiry: e.target.value })}
+                          className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="checkout-cvv" className="text-sm text-[#6B6B6B] mb-2 block">
+                          CVV
+                        </label>
+                        <input
+                          id="checkout-cvv"
+                          type="text"
+                          value={formData.cvv}
+                          onChange={(e) => setFormData({ ...formData, cvv: e.target.value })}
+                          className="w-full px-4 py-3 border border-[#E5E0D8] focus:outline-none focus:border-[#1A1A1A]"
+                        />
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 p-4 bg-[#F5F0E8]">
                       <Shield className="w-5 h-5 text-green-600" />

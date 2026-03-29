@@ -72,11 +72,15 @@ export function JournalArticlePage() {
               <div className="flex gap-2">
                 <button
                   onClick={() => setIsLiked(!isLiked)}
+                  aria-label={isLiked ? 'Remove article from favorites' : 'Add article to favorites'}
                   className="w-10 h-10 border border-[#E5E0D8] flex items-center justify-center hover:border-[#1A1A1A] transition-colors"
                 >
                   <Heart className={`w-4 h-4 ${isLiked ? 'fill-red-500 text-red-500' : ''}`} />
                 </button>
-                <button className="w-10 h-10 border border-[#E5E0D8] flex items-center justify-center hover:border-[#1A1A1A] transition-colors">
+                <button
+                  aria-label="Share article"
+                  className="w-10 h-10 border border-[#E5E0D8] flex items-center justify-center hover:border-[#1A1A1A] transition-colors"
+                >
                   <Share2 className="w-4 h-4" />
                 </button>
               </div>

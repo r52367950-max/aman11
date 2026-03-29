@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ChevronDown } from 'lucide-react';
@@ -65,6 +65,20 @@ export function Header() {
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLangOpen, setIsLangOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const menuPanelRef = useRef<HTMLDivElement>(null);
+  const langButtonRef = useRef<HTMLButtonElement>(null);
+  const langPanelRef = useRef<HTMLDivElement>(null);
+
+  const menuPanelId = 'header-menu-panel';
+  const langPanelId = 'header-language-panel';
+
+  const getFocusableElements = (container: HTMLElement) =>
+    Array.from(
+      container.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+      )
+    ).filter((element) => !element.hasAttribute('disabled'));
 
   // Lock body scroll when menu is open
   useEffect(() => {
@@ -77,6 +91,87 @@ export function Header() {
       document.body.style.overflow = '';
     };
   }, [isMenuOpen]);
+
+  useEffect(() => {
+    const panel = menuPanelRef.current;
+    if (!isMenuOpen || !panel) return;
+
+    const menuTrigger = menuButtonRef.current;
+    const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusableElements = getFocusableElements(panel);
+    focusableElements[0]?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setIsMenuOpen(false);
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+
+      const activeFocusableElements = getFocusableElements(panel);
+      if (activeFocusableElements.length === 0) return;
+
+      const firstElement = activeFocusableElements[0];
+      const lastElement = activeFocusableElements[activeFocusableElements.length - 1];
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      (trigger ?? menuTrigger)?.focus();
+    };
+  }, [isMenuOpen]);
+
+  useEffect(() => {
+    const panel = langPanelRef.current;
+    if (!isLangOpen || !panel) return;
+
+    const trigger = langButtonRef.current;
+    const focusableElements = getFocusableElements(panel);
+    focusableElements[0]?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setIsLangOpen(false);
+        return;
+      }
+
+      if (event.key !== 'Tab') return;
+
+      const activeFocusableElements = getFocusableElements(panel);
+      if (activeFocusableElements.length === 0) return;
+
+      const firstElement = activeFocusableElements[0];
+      const lastElement = activeFocusableElements[activeFocusableElements.length - 1];
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      trigger?.focus();
+    };
+  }, [isLangOpen]);
 
   const handleNavClick = (href: string) => {
     setIsMenuOpen(false);
@@ -97,9 +192,12 @@ export function Header() {
           <div className="flex items-center justify-between h-20">
             {/* Left - Menu Button */}
             <button
+              ref={menuButtonRef}
               onClick={() => setIsMenuOpen(true)}
               className="flex items-center gap-3 group"
               aria-label="Open menu"
+              aria-expanded={isMenuOpen}
+              aria-controls={menuPanelId}
             >
               <Menu className="w-5 h-5 text-[#1A1A1A] transition-transform duration-300 group-hover:scale-110" />
               <span className="label-uppercase hidden sm:inline">Menu</span>
@@ -130,8 +228,11 @@ export function Header() {
               {/* Language Selector */}
               <div className="relative">
                 <button
+                  ref={langButtonRef}
                   onClick={() => setIsLangOpen(!isLangOpen)}
                   className="flex items-center gap-2 group"
+                  aria-expanded={isLangOpen}
+                  aria-controls={langPanelId}
                 >
                   <span className="label-uppercase hidden sm:inline">English</span>
                   <ChevronDown className="w-4 h-4 transition-transform duration-300" />
@@ -140,6 +241,8 @@ export function Header() {
                 <AnimatePresence>
                   {isLangOpen && (
                     <motion.div
+                      ref={langPanelRef}
+                      id={langPanelId}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
@@ -173,6 +276,10 @@ export function Header() {
       <AnimatePresence>
         {isMenuOpen && (
           <motion.div
+            ref={menuPanelRef}
+            id={menuPanelId}
+            role="dialog"
+            aria-modal="true"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}

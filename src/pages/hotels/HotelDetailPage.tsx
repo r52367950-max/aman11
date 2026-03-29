@@ -119,12 +119,14 @@ export function HotelDetailPage() {
         {/* Navigation */}
         <button
           onClick={prevImage}
+          aria-label="View previous hotel image"
           className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white hover:text-[#1A1A1A] transition-all"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
         <button
           onClick={nextImage}
+          aria-label="View next hotel image"
           className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white hover:text-[#1A1A1A] transition-all"
         >
           <ChevronRight className="w-6 h-6" />
@@ -174,6 +176,7 @@ export function HotelDetailPage() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setIsLiked(!isLiked)}
+                  aria-label={isLiked ? 'Remove hotel from favorites' : 'Add hotel to favorites'}
                   className={cn(
                     'w-12 h-12 flex items-center justify-center border border-white/30 transition-all',
                     isLiked
@@ -183,7 +186,10 @@ export function HotelDetailPage() {
                 >
                   <Heart className={cn('w-5 h-5', isLiked && 'fill-current')} />
                 </button>
-                <button className="w-12 h-12 flex items-center justify-center bg-white/10 border border-white/30 text-white hover:bg-white hover:text-[#1A1A1A] transition-all">
+                <button
+                  aria-label="Share hotel"
+                  className="w-12 h-12 flex items-center justify-center bg-white/10 border border-white/30 text-white hover:bg-white hover:text-[#1A1A1A] transition-all"
+                >
                   <Share2 className="w-5 h-5" />
                 </button>
               </div>
