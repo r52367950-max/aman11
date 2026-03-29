@@ -8,7 +8,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "auth:dev": "node server/app.js"
+    "auth:dev": "node server/app.js",
+    "typecheck": "tsc --noEmit",
+    "lint:unused": "eslint \"src/**/*.{ts,tsx}\" --max-warnings=0 --report-unused-disable-directives-severity off --rule 'react-refresh/only-export-components: off' --rule '@typescript-eslint/no-unused-vars: [error, {argsIgnorePattern: \"^_\", varsIgnorePattern: \"^_\"}]' --rule '@typescript-eslint/no-empty-object-type: off' --rule 'prefer-const: off'"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

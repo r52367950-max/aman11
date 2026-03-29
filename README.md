@@ -2,6 +2,25 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
+## 当前架构说明
+
+### 1) 路由入口
+- 应用启动入口在 `src/main.tsx`，通过 `RouterProvider` 挂载路由。  
+- 路由定义集中在 `src/router.tsx`，使用 `createHashRouter`，并由 `RootLayout` 承载各业务页面。
+
+### 2) 全局状态
+- 全局主题状态由 `src/contexts/ThemeContext.tsx` 提供。  
+- 购物车全局状态由 `src/contexts/CartContext.tsx` 提供（包含商品、抽屉开关、总价/总数及操作方法）。
+
+### 3) 数据流
+- 页面级数据主要由 `src/data/*.ts` 的静态数据源提供（如酒店、体验、商城、文章等）。  
+- 典型路径：`router -> page -> section/component -> data/context`。  
+- 交互状态（如购物车）通过 Context Hook (`useCart`) 在组件树中读写。
+
+### 4) API 层位置
+- 当前前端以本地静态数据为主；后端相关代码位于 `server/`（如 `server/app.js`、`server/store.js`、`server/security.js`）。  
+- 如果后续接入远程 API，建议在 `src/lib/` 下新增独立 API client（如 `src/lib/api/*`），由页面/contexts 调用并统一处理鉴权与错误。
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh

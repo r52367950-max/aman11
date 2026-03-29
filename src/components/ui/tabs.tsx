@@ -190,7 +190,7 @@ interface AnimatedTabsProps extends TabsProps {
 export function AnimatedTabs({
   children,
   className,
-  indicatorClassName,
+  indicatorClassName: _indicatorClassName,
   ...props
 }: AnimatedTabsProps) {
   return (
