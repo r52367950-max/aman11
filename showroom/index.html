@@ -1,0 +1,400 @@
+<meta charset="utf-8" />
+<title>NOCTIS R1 · 实时三维展台</title>
+<style>
+  /* ---- tokens: light is the default studio, dark is the night studio ---- */
+  :root {
+    color-scheme: light;
+    --ground: #e6e7ea;
+    --ground-2: #dcdee2;
+    --panel: rgba(255, 255, 255, 0.72);
+    --panel-solid: #f4f5f7;
+    --ink: #0f1216;
+    --ink-2: #4a525d;
+    --ink-3: #79828e;
+    --rule: rgba(15, 18, 22, 0.14);
+    --rule-soft: rgba(15, 18, 22, 0.07);
+    --accent: #0b7a71;
+    --accent-ink: #ffffff;
+    --bronze: #9a6d2f;
+    --hot: #c02a17;
+    --shadow: 0 18px 50px -28px rgba(10, 14, 20, 0.55);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      color-scheme: dark;
+      --ground: #0a0b0d;
+      --ground-2: #050506;
+      --panel: rgba(20, 23, 28, 0.72);
+      --panel-solid: #101317;
+      --ink: #e9ecf1;
+      --ink-2: #9aa4b1;
+      --ink-3: #6b7480;
+      --rule: rgba(233, 236, 241, 0.16);
+      --rule-soft: rgba(233, 236, 241, 0.08);
+      --accent: #4ad7c4;
+      --accent-ink: #04211e;
+      --bronze: #d3a05a;
+      --hot: #ff5238;
+      --shadow: 0 18px 50px -30px rgba(0, 0, 0, 0.9);
+    }
+  }
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+    --ground: #0a0b0d;
+    --ground-2: #050506;
+    --panel: rgba(20, 23, 28, 0.72);
+    --panel-solid: #101317;
+    --ink: #e9ecf1;
+    --ink-2: #9aa4b1;
+    --ink-3: #6b7480;
+    --rule: rgba(233, 236, 241, 0.16);
+    --rule-soft: rgba(233, 236, 241, 0.08);
+    --accent: #4ad7c4;
+    --accent-ink: #04211e;
+    --bronze: #d3a05a;
+    --hot: #ff5238;
+    --shadow: 0 18px 50px -30px rgba(0, 0, 0, 0.9);
+  }
+
+  @font-face {
+    font-family: 'Saira Condensed';
+    src: url('assets/fonts/saira-condensed-latin-700-normal.woff2') format('woff2');
+    font-weight: 700;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Saira Condensed';
+    src: url('assets/fonts/saira-condensed-latin-600-normal.woff2') format('woff2');
+    font-weight: 600;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Plex Sans';
+    src: url('assets/fonts/ibm-plex-sans-latin-400-normal.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Plex Sans';
+    src: url('assets/fonts/ibm-plex-sans-latin-500-normal.woff2') format('woff2');
+    font-weight: 500;
+    font-display: swap;
+  }
+  @font-face {
+    font-family: 'Plex Mono';
+    src: url('assets/fonts/ibm-plex-mono-latin-400-normal.woff2') format('woff2');
+    font-weight: 400;
+    font-display: swap;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100svh;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: 'Plex Sans', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #stage { position: fixed; inset: 0; }
+  #view { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+  #view.dragging { cursor: grabbing; }
+
+  .eyebrow {
+    font-family: 'Saira Condensed', 'Plex Sans', sans-serif;
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* ---- masthead -------------------------------------------------------- */
+  .masthead {
+    position: fixed;
+    top: 0; left: 0;
+    padding: 22px 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    pointer-events: none;
+    z-index: 3;
+  }
+  .masthead h1 {
+    margin: 0;
+    font-family: 'Saira Condensed', 'Plex Sans', sans-serif;
+    font-weight: 700;
+    font-size: clamp(30px, 4.6vw, 54px);
+    line-height: 0.94;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+  }
+  .masthead h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+  .masthead .sub {
+    font-size: 12px;
+    color: var(--ink-2);
+    letter-spacing: 0.04em;
+    max-width: 30ch;
+  }
+
+  /* ---- control rail ---------------------------------------------------- */
+  .rail {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: 306px;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    background: var(--panel);
+    backdrop-filter: blur(18px) saturate(1.2);
+    -webkit-backdrop-filter: blur(18px) saturate(1.2);
+    border-left: 1px solid var(--rule);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .rail section {
+    padding: 16px 20px 18px;
+    border-bottom: 1px solid var(--rule-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+  }
+  .rail section:last-child { border-bottom: 0; }
+  .sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .sec-head b {
+    font-family: 'Saira Condensed', 'Plex Sans', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.1em;
+  }
+
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+
+  button {
+    font: inherit;
+    color: var(--ink-2);
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 8px 6px;
+    cursor: pointer;
+    transition: color 0.16s, border-color 0.16s, background 0.16s;
+  }
+  button:hover { color: var(--ink); border-color: var(--ink-3); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  button[aria-pressed='true'] {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 11%, transparent);
+  }
+  button .k {
+    display: block;
+    font-family: 'Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    color: var(--ink-3);
+    margin-top: 2px;
+  }
+  button[aria-pressed='true'] .k { color: inherit; opacity: 0.7; }
+
+  .wide {
+    width: 100%;
+    padding: 9px;
+    font-family: 'Saira Condensed', 'Plex Sans', sans-serif;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-size: 13px;
+  }
+  .wide.primary { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+  .wide.primary:hover { filter: brightness(1.08); color: var(--accent-ink); }
+
+  .swatches { display: grid; grid-template-columns: repeat(6, 1fr); gap: 7px; }
+  .swatch {
+    position: relative;
+    aspect-ratio: 1;
+    padding: 0;
+    border-radius: 50%;
+    border: 1px solid var(--rule);
+    box-shadow: inset 0 -4px 8px -4px rgba(0, 0, 0, 0.7), inset 0 4px 6px -4px rgba(255, 255, 255, 0.55);
+  }
+  .swatch[aria-pressed='true'] { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .swatch-name { font-size: 12px; color: var(--ink-2); display: flex; justify-content: space-between; }
+  .swatch-name span:last-child { font-family: 'Plex Mono', monospace; font-size: 10px; color: var(--ink-3); letter-spacing: 0.06em; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-2); }
+  .field label b { font-family: 'Plex Mono', monospace; font-weight: 400; color: var(--ink); font-variant-numeric: tabular-nums; }
+  input[type='range'] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 18px;
+    background: transparent;
+    cursor: pointer;
+  }
+  input[type='range']::-webkit-slider-runnable-track { height: 2px; background: var(--rule); }
+  input[type='range']::-moz-range-track { height: 2px; background: var(--rule); }
+  input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 8px; height: 16px;
+    margin-top: -7px;
+    background: var(--accent);
+    border: 0; border-radius: 1px;
+  }
+  input[type='range']::-moz-range-thumb {
+    width: 8px; height: 16px;
+    background: var(--accent);
+    border: 0; border-radius: 1px;
+  }
+  input[type='range']:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  /* ---- telemetry ------------------------------------------------------- */
+  .telemetry {
+    position: fixed;
+    left: 26px; bottom: 22px;
+    z-index: 3;
+    display: flex;
+    gap: 26px;
+    pointer-events: none;
+  }
+  .tel { display: flex; flex-direction: column; gap: 1px; }
+  .tel .v {
+    font-family: 'Plex Mono', monospace;
+    font-size: 20px;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+  }
+  .tel .v i { font-style: normal; font-size: 11px; color: var(--ink-3); margin-left: 3px; }
+  .tel .l { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-3); font-family: 'Saira Condensed', sans-serif; font-weight: 600; }
+  .tel.alert .v { color: var(--hot); }
+
+  .hint {
+    position: fixed;
+    left: 26px; bottom: 96px;
+    z-index: 3;
+    font-size: 11px;
+    color: var(--ink-3);
+    letter-spacing: 0.06em;
+    pointer-events: none;
+    transition: opacity 0.6s;
+  }
+
+  /* ---- loader ---------------------------------------------------------- */
+  .loader {
+    position: fixed; inset: 0; z-index: 10;
+    background: var(--ground);
+    display: grid; place-content: center; justify-items: center; gap: 14px;
+    transition: opacity 0.7s ease;
+  }
+  .loader.done { opacity: 0; pointer-events: none; }
+  .loader .bar { width: 190px; height: 2px; background: var(--rule); overflow: hidden; }
+  .loader .bar i { display: block; height: 100%; width: 30%; background: var(--accent); animation: slide 1.1s ease-in-out infinite; }
+  @keyframes slide { 0% { transform: translateX(-110%); } 100% { transform: translateX(360%); } }
+
+  .fail { max-width: 46ch; text-align: center; color: var(--ink-2); font-size: 13px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .loader .bar i { animation: none; width: 100%; }
+  }
+
+  /* ---- narrow screens: rail becomes a bottom sheet ---------------------- */
+  @media (max-width: 860px) {
+    .rail {
+      top: auto; left: 0; right: 0;
+      width: auto;
+      max-height: 52svh;
+      border-left: 0;
+      border-top: 1px solid var(--rule);
+    }
+    .masthead { padding: 16px 18px; }
+    .telemetry { left: 18px; bottom: calc(52svh + 14px); gap: 18px; }
+    .telemetry .tel:nth-child(n + 4) { display: none; }
+    .hint { display: none; }
+  }
+</style>
+
+<div id="stage"><canvas id="view"></canvas></div>
+
+<header class="masthead">
+  <span class="eyebrow">Noctis Automobili · 实时三维展台</span>
+  <h1>R1 <em>Prototipo</em></h1>
+  <span class="sub">程序化生成的中置引擎超跑：车身由样条截面放样而成，非导入模型。</span>
+</header>
+
+<div class="hint" id="hint">拖拽旋转视角 · 滚轮缩放 · 数字键 1–6 切换视图</div>
+
+<div class="telemetry" id="telemetry">
+  <div class="tel"><span class="v" id="t-speed">0<i>km/h</i></span><span class="l">车速 Speed</span></div>
+  <div class="tel"><span class="v" id="t-rpm">820<i>rpm</i></span><span class="l">转速 Engine</span></div>
+  <div class="tel"><span class="v" id="t-wing">0<i>°</i></span><span class="l">尾翼 Wing</span></div>
+  <div class="tel"><span class="v" id="t-df">0<i>kg</i></span><span class="l">下压力 Downforce</span></div>
+  <div class="tel"><span class="v" id="t-ride">124<i>mm</i></span><span class="l">离地 Ride</span></div>
+</div>
+
+<aside class="rail">
+  <section>
+    <div class="sec-head"><b>视角</b><span class="eyebrow">View</span></div>
+    <div class="grid-3" id="views"></div>
+    <div class="grid-2">
+      <button id="tour" aria-pressed="false">六视巡览<span class="k">TOUR</span></button>
+      <button id="shot">导出六视图<span class="k">EXPORT</span></button>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><b>涂装</b><span class="eyebrow">Finish</span></div>
+    <div class="swatches" id="paints"></div>
+    <div class="swatch-name"><span id="paint-cn">极光青</span><span id="paint-en">AURORA TEAL</span></div>
+  </section>
+
+  <section>
+    <div class="sec-head"><b>动态</b><span class="eyebrow">Motion</span></div>
+    <div class="field">
+      <label for="speed">目标车速<b><span id="speed-val">0</span> km/h</b></label>
+      <input type="range" id="speed" min="0" max="340" step="5" value="0" />
+    </div>
+    <div class="grid-2">
+      <button id="brake">制动<span class="k">BRAKE</span></button>
+      <button id="spin" aria-pressed="true">转台<span class="k">TURNTABLE</span></button>
+      <button id="steer" aria-pressed="false">转向<span class="k">STEERING</span></button>
+      <button id="lamps" aria-pressed="true">灯组<span class="k">LAMPS</span></button>
+    </div>
+  </section>
+
+  <section>
+    <div class="sec-head"><b>展台</b><span class="eyebrow">Studio</span></div>
+    <div class="field">
+      <label for="exposure">曝光<b><span id="exposure-val">1.00</span></b></label>
+      <input type="range" id="exposure" min="0.5" max="1.8" step="0.02" value="1" />
+    </div>
+    <div class="grid-2">
+      <button id="theme">切换环境<span class="k">LIGHT / DARK</span></button>
+      <button id="reset">复位<span class="k">RESET</span></button>
+    </div>
+  </section>
+</aside>
+
+<div class="loader" id="loader">
+  <span class="eyebrow">Noctis R1</span>
+  <div class="bar"><i></i></div>
+  <span class="eyebrow" id="loader-msg">正在生成车身曲面</span>
+</div>
+
+<script src="lib/three.min.js"></script>
+<script src="src/mathx.js"></script>
+<script src="src/textures.js"></script>
+<script src="src/body.js"></script>
+<script src="src/parts.js"></script>
+<script src="src/car.js"></script>
+<script src="src/app.js"></script>
